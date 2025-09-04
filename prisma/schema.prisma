@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int    @id @default(autoincrement())
+  username   String @unique
+  password   String
+  bio        String @default("")
+  level      Int    @default(0)
+  experience Int    @default(0)
+
+  saves                  Save[]
+  likes                  Like[]
+  tracks                 Track[]
+  quests                 Quest[]
+  travels                Travel[]
+  sentFriendRequests     FriendRequest[] @relation("SentRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedRequests")
+}
+
+enum QuestType {
+  TRAVEL_DISTANCE
+  RECORD_TRACK
+  NAVIGATE_TRACK
+}
+
+model Quest {
+  id          Int    @id @default(autoincrement())
+  userId      Int
+  description String
+  experience  Int
+  maxProgress Int
+  progress    Int    @default(0)
+  type        QuestType
+  user        User   @relation(fields: [userId], references: [id])
+}
+
+model FriendRequest {
+  senderId   Int
+  receiverId Int
+  status     Boolean @default(false)
+  sender     User    @relation("SentRequests", fields: [senderId], references: [id])
+  receiver   User    @relation("ReceivedRequests", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+}
+
+model Track {
+  id      Int      @id @default(autoincrement())
+  userId  Int
+  name    String
+  posts   Post[]
+  travels Travel[]
+  user    User     @relation(fields: [userId], references: [id])
+}
+
+model Travel {
+  id           Int      @id @default(autoincrement())
+  trackId      Int?
+  userId       Int
+  time         Float // SECONDS
+  dateTime     DateTime
+  maxSpeed     Float
+  averageSpeed Float
+  distance     Float
+  Track        Track?    @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  User         User     @relation(fields: [userId], references: [id])
+}
+
+model Post {
+  id          Int      @id @default(autoincrement())
+  trackId     Int
+  imageCount  Int      @default(0)
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  saves       Save[]
+  likes       Like[]
+  Track       Track    @relation(fields: [trackId], references: [id])
+}
+
+model Save {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  postId Int
+  user   User @relation(fields: [userId], references: [id])
+  post   Post @relation(fields: [postId], references: [id])
+}
+
+model Like {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  postId Int
+  user   User @relation(fields: [userId], references: [id])
+  post   Post @relation(fields: [postId], references: [id])
+}

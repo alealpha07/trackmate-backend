@@ -1,0 +1,86 @@
+{
+	"server": {
+		"error": "Errore del server!",
+		"missing-params": "Parametri richiesti mancanti: "
+	},
+	"register": {
+		"success": "Utente creato con successo!",
+		"errors": {
+			"username-taken": "Un utente con questo nome utente esiste già!",
+			"passwords-not-match": "Le password non corrispondono!"
+		}
+	},
+	"login": {
+		"success": "Accesso effettuato con successo!"
+	},
+	"logout": {
+		"success": "Disconnessione avvenuta con successo!"
+	},
+	"auth": {
+		"errors": {
+			"unauthorized": "Utente non autenticato!",
+			"wrong-credentials": "Credenziali errate!"
+		}
+	},
+	"user": {
+		"success": {
+			"update": "Utente aggiornato con successo!"
+		},
+		"errors": {
+			"missing": "Errore, utente non trovato!"
+		}
+	},
+	"track": {
+		"success": {
+			"create": "Tracciato creato con successo!",
+			"update": "Tracciato aggiornato con successo!",
+			"delete": "Tracciato eliminato con successo!",
+			"travel": "Viaggio salvato con successo!"
+		}
+	},
+	"friend": {
+		"success": {
+			"send": "Richiesta di amicizia inviata con successo!",
+			"accept": "Richiesta di amicizia accettata con successo!",
+			"refuse": "Richiesta di amicizia rifiutata con successo!",
+			"remove": "Amico rimosso con successo!"
+		}
+	},
+	"post": {
+		"success": {
+			"create": "Post creato con successo!",
+			"update": "Post aggiornato con successo!",
+			"delete": "Post eliminato con successo!",
+			"like": "Post aggiunto ai preferiti con successo!",
+			"unlike": "Post rimosso dai preferiti con successo!",
+			"save": "Post salvato con successo!",
+			"unsave": "Post rimosso dai salvati con successo!"
+		},
+		"errors": {
+			"missing": "Post mancante!"
+		}
+	},
+	"quest": {
+		"success": {
+			"collect": "Quest completata con successo!",
+			"update": "Questa aggiornata con successo!"
+		},
+		"errors": {
+			"missing": "Quest mancante!",
+			"uncompleted": "Quest non completata!"
+		}
+	},
+	"file": {
+		"success": {
+			"upload": "File caricato con successo!",
+			"delete": "File eliminato con successo!"
+		},
+		"errors": {
+			"missing": "Errore, file mancante!"
+		}
+	},
+	"id": "id",
+	"bio": "bio",
+	"text": "text",
+	"Missing credentials": "Missing credentials"
+}
