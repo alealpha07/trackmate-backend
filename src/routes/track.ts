@@ -183,48 +183,65 @@ router.get("/travel/details", isAuthenticated, async (request: Request, response
 })
 
 // Get leaderboard
-router.get("/leaderboard", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+router.get(
+  "/leaderboard",
+  isAuthenticated,
+  async (request: Request, response: Response): Promise<any> => {
     try {
-        const requiredParams = ["id"];
-        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.query);
-        if (missingParams.length > 0) {
-            return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
-        }
+      const requiredParams = ["id"];
+      const { sanitizedParams, missingParams } = sanitizeParams(
+        requiredParams,
+        request.query
+      );
+      if (missingParams.length > 0) {
+        return response
+          .status(422)
+          .send(
+            response.__("server.missing-params") +
+              missingParams.map((p) => response.__(p)).join(", ")
+          );
+      }
 
-        const trackId = parseInt(sanitizedParams.id);
+      const trackId = parseInt(sanitizedParams.id);
 
-        const leaderboard = await prisma.travel.findMany({
-            where: {
-                trackId: trackId
-            },
-            distinct: ['userId'],
-            orderBy: {
-                time: 'asc'
-            },
-            take: 10,
-            select: {
-                userId: true,
-                time: true,
-                User: {
-                    select: {
-                        username: true
-                    }
-                }
-            }
-        });
-        
-        const formattedLeaderboard = leaderboard.map(record => ({
-            userId: record.userId,
-            name: record.User.username,
-            time: record.time
-        }));
+      const leaderboard = await prisma.travel.groupBy({
+        by: ["userId"],
+        where: {
+          trackId: trackId,
+        },
+        _min: {
+          time: true,
+        },
+        orderBy: {
+          _min: {
+            time: "asc",
+          },
+        },
+        take: 10,
+      });
 
-        response.send(formattedLeaderboard);
+      const userIds = leaderboard.map((entry) => entry.userId);
+      const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, username: true },
+      });
+
+      const userMap = new Map(users.map((u) => [u.id, u.username]));
+
+      const formattedLeaderboard = leaderboard.map((record) => ({
+        userId: record.userId,
+        name: userMap.get(record.userId) ?? "Unknown",
+        time: record._min.time,
+      }));
+
+      response.send(formattedLeaderboard);
     } catch (error) {
-        response.status(500).send(response.__("server.error"));
-        console.error(error);
+      response.status(500).send(response.__("server.error"));
+      console.error(error);
     }
-})
+  }
+);
+
 
 // Edit Track
 router.put("/", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
