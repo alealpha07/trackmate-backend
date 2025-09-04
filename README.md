@@ -21,6 +21,8 @@ npm run db:seed       # optional
 npm run dev
 ```
 
+The seed also creates three users: admin/admin, guest/guest and user/user.
+
 ## Docker
 
 Copy `example.docker-compose.yml` to `docker-compose.yml`, fill in the environment variables, then:
