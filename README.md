@@ -1,17 +1,17 @@
 # Trackmate Backend
 
-The backend service for **Trackmate**, built with **Node.js** and **TypeScript**.  
-It provides APIs for managing routes, user data, challenges, and social interactions.  
+The backend service for **Trackmate**, built with **Node.js** and **TypeScript**.
+It provides APIs for managing routes, user data, challenges, and social interactions.
 The project uses **Prisma** as the ORM and supports both local development and Docker-based deployments.
 
 ---
 
 ## Features
 
-- **RESTful API** for mobile app integration  
-- **Prisma ORM** for database access and migrations  
-- Environment-based configuration with `.env`  
-- Docker support for containerized deployment  
+* **RESTful API** for mobile app integration
+* **Prisma ORM** for database access and migrations
+* Environment-based configuration with `.env`
+* Docker support for containerized deployment
 
 ---
 
@@ -19,25 +19,26 @@ The project uses **Prisma** as the ORM and supports both local development and D
 
 Before setting up the project, ensure you have the following installed:
 
-- **Node.js v20+**  
-- **npm** (comes with Node.js)  
-- **Prisma CLI** (installed via npm scripts)  
-- **Docker** (optional, for containerized setup)  
+* **Node.js v20+**
+* **npm** (comes with Node.js)
+* **Prisma CLI** (installed via npm scripts)
+* **Docker** (optional, for containerized setup)
 
 ---
 
 ## Setup for Development
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/alealpha07/trackmate-backend.git
    cd trackmate-backend
-    ```
+   ```
 
 2. **Configure Environment Variables:**
 
    * Copy the file `example.env` to a new file named `.env`
-   * Open `.env` and update the fields with your configuration 
+   * Open `.env` and update the fields with your configuration
 
 3. **Install Dependencies:**
 
@@ -57,6 +58,14 @@ Before setting up the project, ensure you have the following installed:
    ```bash
    npm run db:seed
    ```
+
+   Besides all seed ddata the script will also create **three user accounts** by default:
+
+   | Username | Password |
+   | -------- | -------- |
+   | admin    | admin    |
+   | guest    | guest    |
+   | user     | user     |
 
 6. **Start the Development Server:**
 
