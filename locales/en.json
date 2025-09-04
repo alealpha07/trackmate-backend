@@ -1,0 +1,86 @@
+{
+	"server": {
+		"error": "Server error!",
+		"missing-params": "Missing required paramiters: "
+	},
+	"register": {
+		"success": "User created successfully!",
+		"errors": {
+			"username-taken": "Username already taken!",
+			"passwords-not-match": "Passwords do not match!"
+		}
+	},
+	"login": {
+		"success": "Logged in successfully!"
+	},
+	"logout": {
+		"success": "Logged out successfully!"
+	},
+	"auth": {
+		"errors": {
+			"unauthorized": "User is not authenticated!",
+			"wrong-credentials": "Wrong Credentials!"
+		}
+	},
+	"user": {
+		"success": {
+			"update": "User updated successfully!"
+		},
+		"errors": {
+			"missing": "User not found!"
+		}
+	},
+	"track": {
+		"success": {
+			"create": "Track created successfully!",
+			"update": "Track updated successfully!",
+			"delete": "Track deleted successfully!",
+			"travel": "Travel saved successfully!"
+		}
+	},
+	"friend": {
+		"success": {
+			"send": "Friend request sent successfully!",
+			"accept": "Friend request accepted successfully!",
+			"refuse": "Friend request refused successfully!",
+			"remove": "Friend removed successfully!"
+		}
+	},
+	"post": {
+		"success": {
+			"create": "Post created successfully!",
+			"update": "Post updated successfully!",
+			"delete": "Post deleted successfully!",
+			"like": "Post added to favorites successfully!",
+			"unlike": "Post removed from favorites successfully!",
+			"save": "Post saved successfully!",
+			"unsave": "Post removed from saved successfully!"
+		},
+		"errors": {
+			"missing": "Post missing!"
+		}
+	},
+	"quest": {
+		"success": {
+			"collect": "Quest completed successfully!",
+			"update": "Quest updated successfully!"
+		},
+		"errors": {
+			"missing": "Quest missing!",
+			"uncompleted": "Quest not completed!"
+		}
+	},
+	"file": {
+		"success": {
+			"upload": "File uploaded successfully!",
+			"delete": "File deleted successfully!"
+		},
+		"errors": {
+			"missing": "Error, file missing!"
+		}
+	},
+	"id": "id",
+	"bio": "bio",
+	"text": "text",
+	"Missing credentials": "Missing credentials"
+}

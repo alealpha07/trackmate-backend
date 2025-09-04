@@ -1,0 +1,14 @@
+services:
+  carmind-backend:
+    build:
+      context: .
+    ports:
+      - "PUT_YOUR_PORT_HERE:3000"
+    volumes:
+      - ./appdb:/usr/src/app/prisma/data
+      - ./appuploads:/usr/src/app/uploads
+    environment:
+      - DATABASE_URL=file:./data/dev.db
+      - SESSION_SECRET=PUT_YOUR_SESSION_SECRET
+      - COOKIE_SECRET=PUT_YOUR_COOKIE_SECRET
+      - PORT=3000
