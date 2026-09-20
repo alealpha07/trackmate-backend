@@ -7,6 +7,7 @@ import fs from "fs";
 
 const router = express.Router();
 const FINAL_UPLOAD_DIR = path.join(UPLOAD_DIR, "track");
+const TRAVEL_UPLOAD_DIR = path.join(UPLOAD_DIR, "travel");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -100,7 +101,7 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.travel.create({
+        const travel = await prisma.travel.create({
             data: {
                 userId: (request.user as User).id,
                 trackId: sanitizedParams.id,
@@ -111,12 +112,76 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
                 dateTime: new Date()
             }
         });
-        response.send(response.__("track.success.travel"));
+        response.json({ id: travel.id, message: response.__("track.success.travel") });
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);
     }
 })
+
+// Upload travel points (with per-point speed)
+router.post("/travel/file", upload.single("file"), isAuthenticated, async (req: Request, res: Response): Promise<any> => {
+    try {
+        if (!req.file) {
+            return res.status(422).send(res.__("file.errors.missing"));
+        }
+
+        const requiredParams = ["id"];
+        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, req.query);
+        if (missingParams.length > 0) {
+            return res.status(422).send(
+                res.__("server.missing-params") +
+                missingParams.map((p) => res.__(p)).join(", ")
+            );
+        }
+
+        const travelId = parseInt(sanitizedParams.id);
+        const travel = await prisma.travel.findUnique({ where: { id: travelId } });
+        if (!travel) {
+            return res.status(404).send(res.__("track.errors.missing"));
+        }
+        if (travel.userId !== (req.user as User).id) {
+            return res.status(403).send(res.__("auth.errors.unauthorized"));
+        }
+
+        const outputPath = path.join(TRAVEL_UPLOAD_DIR, `${travelId}.json`);
+
+        fs.mkdirSync(TRAVEL_UPLOAD_DIR, { recursive: true });
+        const jsonContent = req.file.buffer.toString("utf-8");
+        fs.writeFileSync(outputPath, jsonContent);
+
+        res.send(res.__("file.success.upload"));
+    } catch (error: any) {
+        console.error(error);
+        res.status(500).send(res.__("server.error"));
+    }
+});
+
+// Get travel points
+router.get("/travel/file", isAuthenticated, async (req: Request, res: Response): Promise<any> => {
+    try {
+        const requiredParams = ["id"];
+        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, req.query);
+        if (missingParams.length > 0) {
+            return res.status(422).send(
+                res.__("server.missing-params") +
+                missingParams.map((p) => res.__(p)).join(", ")
+            );
+        }
+
+        const travelId = sanitizedParams.id;
+        const filePath = path.join(TRAVEL_UPLOAD_DIR, `${travelId}.json`);
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).send(res.__("file.errors.missing"));
+        }
+
+        res.sendFile(filePath);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send(res.__("server.error"));
+    }
+});
 
 // Get travels
 router.get("/travel", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
