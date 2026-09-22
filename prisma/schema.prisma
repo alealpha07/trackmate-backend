@@ -88,7 +88,7 @@ model Post {
   createdAt   DateTime @default(now())
   saves       Save[]
   likes       Like[]
-  Track       Track    @relation(fields: [trackId], references: [id])
+  Track       Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
 }
 
 model Save {
@@ -96,7 +96,7 @@ model Save {
   userId Int
   postId Int
   user   User @relation(fields: [userId], references: [id])
-  post   Post @relation(fields: [postId], references: [id])
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model Like {
@@ -104,5 +104,5 @@ model Like {
   userId Int
   postId Int
   user   User @relation(fields: [userId], references: [id])
-  post   Post @relation(fields: [postId], references: [id])
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
