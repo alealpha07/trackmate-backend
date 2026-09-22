@@ -16,7 +16,7 @@ function generateQuests() {
 
   for (const km of travelSteps) {
     quests.push({
-      description: `Viaggia ${km} km`,
+      description: `Travel ${km} km`,
       experience: km * 20,
       maxProgress: km,
       type: "TRAVEL_DISTANCE",
@@ -25,7 +25,7 @@ function generateQuests() {
 
   for (const count of navigateSteps) {
     quests.push({
-      description: `Percorri ${count} tracciati`,
+      description: `Navigate ${count} ${count === 1 ? "track" : "tracks"}`,
       experience: count * 25,
       maxProgress: count,
       type: "NAVIGATE_TRACK",
@@ -34,7 +34,7 @@ function generateQuests() {
 
   for (const count of recordSteps) {
     quests.push({
-      description: `Registra ${count} tracciati`,
+      description: `Record ${count} ${count === 1 ? "track" : "tracks"}`,
       experience: count * 30,
       maxProgress: count,
       type: "RECORD_TRACK",
