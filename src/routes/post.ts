@@ -397,6 +397,9 @@ router.get("/friends", isAuthenticated, async (request: Request, response: Respo
                     },
                 },
             },
+            orderBy: {
+                createdAt: "desc"
+            },
             include: {
                 Track: {
                     include: {
@@ -492,13 +495,9 @@ router.get(
             const limit = 10;
             const offset = parseInt(sanitizedParams.offset);
 
-            const days = 7;
-            const fromDate = new Date();
-            fromDate.setDate(fromDate.getDate() - days);
-
-            let posts = await prisma.post.findMany({
+            const posts = await prisma.post.findMany({
                 where: {
-                    createdAt: { gte: fromDate }, NOT: {
+                    NOT: {
                         Track: { userId: (request.user as User).id }
                     }
                 },
@@ -512,30 +511,12 @@ router.get(
                 },
             });
 
-            if (posts.length === 0) {
-                posts = await prisma.post.findMany({
-                    where: {
-                        NOT: {
-                            Track: { userId: (request.user as User).id }
-                        }
-                    },
-                    include: {
-                        Track: {
-                            include: { user: true },
-                        },
-                        likes: true,
-                        saves: true,
-                        _count: { select: { likes: true, saves: true } },
-                    },
-                });
-            }
-
             const trending = posts
                 .map((p) => ({
                     ...p,
                     popularity: p._count.likes + p._count.saves,
                 }))
-                .sort((a, b) => b.popularity - a.popularity)
+                .sort((a, b) => b.popularity - a.popularity || b.createdAt.getTime() - a.createdAt.getTime())
                 .slice(offset, offset + limit)
                 .map((post) => {
                     if (!post) return;
