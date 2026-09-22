@@ -189,6 +189,9 @@ router.get("/travel", isAuthenticated, async (request: Request, response: Respon
             where: {
                 userId: (request.user as User).id
             },
+            orderBy: {
+                dateTime: "desc"
+            },
             include: {
                 Track: {
                     select: {
