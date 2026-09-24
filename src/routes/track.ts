@@ -233,6 +233,11 @@ router.get("/travel/details", isAuthenticated, async (request: Request, response
                     select: {
                         name: true
                     }
+                },
+                User: {
+                    select: {
+                        username: true
+                    }
                 }
             }
         });
@@ -240,7 +245,8 @@ router.get("/travel/details", isAuthenticated, async (request: Request, response
             return {
                 ...t,
                 dateTimeString: t.dateTime.toLocaleDateString('it-IT'),
-                name: t.Track?.name || "unknown"
+                name: t.Track?.name || "unknown",
+                username: t.User?.username || "unknown"
             }
         })
         response.send(travels);
@@ -487,6 +493,7 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response) => {
         res.json({
             id: track.id,
             name: track.name,
+            ownerId: track.userId,
             userBest: formatStats(userBestTravel),
             overallBest: formatStats(overallBestTravel),
             travelCount: track.travels.filter((t) => t.userId == (req.user as User).id).length
