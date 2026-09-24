@@ -70,6 +70,9 @@ import track from "./routes/track";
 app.use("/track", track);
 import search from "./routes/search";
 app.use("/search", search);
+// public: assetlinks.json and shared post pages
+import share from "./routes/share";
+app.use("/", share);
 // #endregion
 
 // initializing cron job for quests
