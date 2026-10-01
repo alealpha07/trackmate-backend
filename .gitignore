@@ -8,3 +8,5 @@ uploads
 docker-compose.yml
 appdb
 appuploads
+cache
+appcache

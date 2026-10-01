@@ -79,8 +79,22 @@
 			"missing": "Error, file missing!"
 		}
 	},
+	"route": {
+		"errors": {
+			"coordinates": "Invalid start or destination coordinates!",
+			"vehicle": "Unsupported vehicle!",
+			"policy": "Unsupported routing policy!",
+			"too-far": "Start and destination must be at most %s km apart!",
+			"no-route": "No route found between these points!",
+			"map-data": "Map data is temporarily unavailable, try again later!"
+		}
+	},
 	"id": "id",
 	"bio": "bio",
 	"text": "text",
-	"Missing credentials": "Missing credentials"
+	"Missing credentials": "Missing credentials",
+	"start": "start",
+	"end": "end",
+	"vehicle": "vehicle",
+	"policy": "policy"
 }

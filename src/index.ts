@@ -70,6 +70,8 @@ import track from "./routes/track";
 app.use("/track", track);
 import search from "./routes/search";
 app.use("/search", search);
+import route from "./routes/route";
+app.use("/route", route);
 // public: assetlinks.json and shared post pages
 import share from "./routes/share";
 app.use("/", share);

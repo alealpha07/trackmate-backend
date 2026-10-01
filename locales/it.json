@@ -79,8 +79,22 @@
 			"missing": "Errore, file mancante!"
 		}
 	},
+	"route": {
+		"errors": {
+			"coordinates": "Coordinate di partenza o destinazione non valide!",
+			"vehicle": "Veicolo non supportato!",
+			"policy": "Criterio di percorso non supportato!",
+			"too-far": "Partenza e destinazione devono distare al massimo %s km!",
+			"no-route": "Nessun percorso trovato tra questi punti!",
+			"map-data": "Dati della mappa temporaneamente non disponibili, riprova più tardi!"
+		}
+	},
 	"id": "id",
 	"bio": "bio",
 	"text": "text",
-	"Missing credentials": "Missing credentials"
+	"Missing credentials": "Missing credentials",
+	"start": "partenza",
+	"end": "destinazione",
+	"vehicle": "veicolo",
+	"policy": "criterio"
 }
