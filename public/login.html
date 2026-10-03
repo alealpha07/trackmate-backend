@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrackMate</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/theme.css">
+</head>
+<body class="center-page">
+    <main class="card auth">
+        <h1 data-i18n="login.title"></h1>
+        <p class="subtitle muted" data-i18n="login.subtitle"></p>
+        <form data-mode="login">
+            <div>
+                <label for="username" data-i18n="auth.username"></label>
+                <input id="username" name="username" autocomplete="username" required>
+            </div>
+            <div>
+                <label for="password" data-i18n="auth.password"></label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <p id="error" class="error" role="alert" hidden></p>
+            <button class="button" type="submit" data-i18n="login.submit"></button>
+        </form>
+        <p class="switch muted"><span data-i18n="login.switch"></span> <a href="/register" data-i18n="login.switchLink"></a></p>
+    </main>
+    <script type="module" src="/js/auth.js"></script>
+</body>
+</html>

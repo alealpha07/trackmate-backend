@@ -19,7 +19,7 @@ router.post("/register", async (request: Request, response: Response): Promise<a
             return response.status(422).send(response.__("register.errors.username-taken"));
         }
         if (sanitizedParams.password != sanitizedParams.confirmPassword) {
-            return response.status(422).send(response.__("register.errros.passwords-not-match"));
+            return response.status(422).send(response.__("register.errors.passwords-not-match"));
         }
 
         const hashedPassword = await bcrypt.hash(sanitizedParams.password, PASSWORD_SALT);

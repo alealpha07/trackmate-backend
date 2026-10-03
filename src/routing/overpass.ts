@@ -1,4 +1,4 @@
-import { HIGHWAY_WHITELIST, OVERPASS_ENDPOINT, OVERPASS_TIMEOUT_SECONDS, OVERPASS_USER_AGENT } from "./config";
+import { HIGHWAY_WHITELIST, OVERPASS_ENDPOINTS, OVERPASS_TIMEOUT_SECONDS, OVERPASS_USER_AGENT } from "./config";
 import { BBox, OverpassElement, OverpassResponse } from "./types";
 
 function buildQuery(bbox: BBox): string {
@@ -18,32 +18,47 @@ out skel qt;
 `.trim();
 }
 
-// retry 429 and 504
-const RETRY_STATUSES = [429, 504];
-const RETRY_DELAYS_MS = [5_000, 15_000];
+// retry 429 and 5xx on the next endpoint, other 4xx fail
+const RETRY_STATUSES = [429, 502, 503, 504];
+const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
-export async function fetchOverpass(bbox: BBox): Promise<OverpassElement[]> {
-    const body = "data=" + encodeURIComponent(buildQuery(bbox));
-    let res: Response;
-    for (let attempt = 0; ; attempt++) {
-        res = await fetch(OVERPASS_ENDPOINT, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": OVERPASS_USER_AGENT,
-            },
-            body,
-            signal: AbortSignal.timeout((OVERPASS_TIMEOUT_SECONDS + 30) * 1000),
-        });
-        if (!RETRY_STATUSES.includes(res.status) || attempt >= RETRY_DELAYS_MS.length) break;
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
-    }
+function errorSummary(html: string): string {
+    const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return text.replace(/^.*?ODbL\.\s*/, "").slice(0, 200);
+}
 
+async function query(endpoint: string, body: string): Promise<OverpassElement[]> {
+    const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": OVERPASS_USER_AGENT,
+        },
+        body,
+        signal: AbortSignal.timeout((OVERPASS_TIMEOUT_SECONDS + 30) * 1000),
+    });
     if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Overpass request failed: ${res.status} ${res.statusText}\n${text.slice(0, 500)}`);
+        const error = new Error(`${res.status} ${res.statusText} ${errorSummary(await res.text())}`.trim());
+        (error as any).retryable = RETRY_STATUSES.includes(res.status);
+        throw error;
     }
+    return ((await res.json()) as OverpassResponse).elements;
+}
 
-    const json = (await res.json()) as OverpassResponse;
-    return json.elements;
+export async function fetchOverpass(bbox: BBox, stillWanted: () => boolean = () => true): Promise<OverpassElement[]> {
+    const body = "data=" + encodeURIComponent(buildQuery(bbox));
+    for (let attempt = 0; ; attempt++) {
+        const endpoint = OVERPASS_ENDPOINTS[attempt % OVERPASS_ENDPOINTS.length];
+        try {
+            return await query(endpoint, body);
+        } catch (error: any) {
+            // network errors are temporary too
+            const retryable = error.retryable ?? true;
+            const message = `Overpass ${new URL(endpoint).host}: ${error.message}`;
+            if (!retryable || attempt >= RETRY_DELAYS_MS.length || !stillWanted()) throw new Error(message);
+            console.warn(`${message} (retry ${attempt + 1}/${RETRY_DELAYS_MS.length})`);
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+            if (!stillWanted()) throw new Error(`${message} (no longer needed, not retrying)`);
+        }
+    }
 }

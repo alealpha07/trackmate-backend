@@ -20,18 +20,22 @@ export const HIGHWAY_WHITELIST = [
     "bridleway",
 ];
 
-// main public instance
-export const OVERPASS_ENDPOINT = process.env.OVERPASS_ENDPOINT || "https://overpass-api.de/api/interpreter";
+// comma separated, tried in order
+export const OVERPASS_ENDPOINTS = (process.env.OVERPASS_ENDPOINT || "https://overpass-api.de/api/interpreter")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
 // Overpass mirrors reject generic User-Agents
 export const OVERPASS_USER_AGENT = "trackmate-backend/1.0 (SafeTrack thesis, route planner)";
 export const OVERPASS_TIMEOUT_SECONDS = 120;
-// overpass usually grants 2 slots per IP
+// overpass-api.de allows a few slots per IP
 export const OVERPASS_MAX_PARALLEL = 2;
 
 export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "osm");
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
 // degrees, about 5.5 km
 export const TILE_SIZE_DEG = 0.05;
+export const GRAPH_CACHE_SIZE = 3;
 
 export const MAX_PLAN_DISTANCE_METERS = 50_000;
 // box buffer
