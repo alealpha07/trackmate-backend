@@ -7,6 +7,7 @@ services:
     volumes:
       - ./appdb:/usr/src/app/prisma/data
       - ./appuploads:/usr/src/app/uploads
+      - ./appcache:/usr/src/app/cache
     environment:
       - DATABASE_URL=file:./data/dev.db
       - SESSION_SECRET=PUT_YOUR_SESSION_SECRET
@@ -15,3 +16,5 @@ services:
       - PUBLIC_URL=https://PUT_YOUR_PUBLIC_DOMAIN
       - ANDROID_PACKAGE_NAME=com.example.trackmate
       - ANDROID_CERT_SHA256=PUT_YOUR_APP_SIGNING_SHA256
+      - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter
+      - OSM_CACHE_TTL_DAYS=30
