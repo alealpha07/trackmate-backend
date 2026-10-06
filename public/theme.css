@@ -1,0 +1,56 @@
+/* TrackMate web theme: same tokens as the app and the shared-post page */
+:root {
+    --primary: #6200ee;
+    --on-primary: #ffffff;
+    --bg: #f4f2f8;
+    --card: #ffffff;
+    --text: #1c1b1f;
+    --muted: #6b6878;
+    --border: #e3e0ea;
+    --error: #b3261e;
+    --start: #1b873f;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0, 0, 0, .08);
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary: #bb86fc;
+        --bg: #121016;
+        --card: #1e1b24;
+        --text: #ece9f1;
+        --muted: #a39fad;
+        --border: #34303c;
+        --error: #f2b8b5;
+        --start: #6fdc8c;
+        color-scheme: dark;
+    }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+[hidden] { display: none !important; }
+
+.card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.button { display: block; width: 100%; padding: 14px; border: 0; border-radius: 999px; background: var(--primary);
+          color: var(--on-primary); text-align: center; text-decoration: none; font: inherit; font-weight: 600; cursor: pointer; }
+.button:disabled { opacity: .5; cursor: default; }
+.button.secondary { background: transparent; color: var(--primary); box-shadow: inset 0 0 0 1.5px var(--primary); }
+.link-button { border: 0; background: none; padding: 0; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; }
+.muted { color: var(--muted); }
+.error { color: var(--error); }
+
+label { display: block; margin: 0 0 6px; color: var(--muted); font-size: .85rem; }
+input, select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px;
+                background: var(--bg); color: inherit; font: inherit; }
+input:focus, select:focus { outline: none; border-color: var(--primary); }
+
+/* Login / register */
+.center-page { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 32px 16px; }
+.auth { width: 100%; max-width: 400px; padding: 24px; }
+.auth h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.auth .subtitle { margin: 0 0 24px; }
+.auth form { display: grid; gap: 16px; }
+.auth .switch { margin: 20px 0 0; text-align: center; }
+.auth .switch a { color: var(--primary); font-weight: 600; text-decoration: none; }

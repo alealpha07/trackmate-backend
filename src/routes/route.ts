@@ -1,8 +1,10 @@
 import express, { Request, Response } from "express";
+import { User } from "@prisma/client";
 import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
 import { MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
 import { planRoute } from "../routing/plan";
+import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
 import { LatLng } from "../routing/types";
 
 const router = express.Router();
@@ -39,11 +41,18 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
             return response.status(422).send(response.__("route.errors.too-far", String(MAX_PLAN_DISTANCE_METERS / 1000)));
         }
 
+        // The page aborts its previous request when the user re-plans: stop waiting for its map data
+        const controller = new AbortController();
+        response.on("close", () => {
+            if (!response.writableFinished) controller.abort();
+        });
+
         let route;
         try {
-            route = await planRoute(start, end);
+            route = await planRoute(start, end, controller.signal);
         } catch (error) {
-            console.error(error);
+            if ((error as Error).name === "AbortError") return;
+            console.error(`Route planning failed: ${(error as Error).message}`);
             return response.status(502).send(response.__("route.errors.map-data"));
         }
         if (!route) {
@@ -51,6 +60,35 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
         }
 
         response.json(route);
+    } catch (error) {
+        response.status(500).send(response.__("server.error"));
+        console.error(error);
+    }
+})
+
+// Search places for the start/destination fields
+router.get("/geocode", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+    try {
+        const requiredParams = ["text"];
+        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.query);
+        if (missingParams.length > 0) {
+            return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+        if (!isGeocodingConfigured()) {
+            return response.status(503).send(response.__("route.errors.geocoding-disabled"));
+        }
+        if (!takeGeocodeQuota((request.user as User).id)) {
+            return response.status(429).send(response.__("route.errors.geocoding-limit"));
+        }
+
+        const focus = parseLatLng(request.query) ?? undefined;
+        try {
+            const full = request.query.full === "1";
+            response.json(await geocode(String(sanitizedParams.text), response.getLocale(), focus, full));
+        } catch (error) {
+            console.error(error);
+            response.status(502).send(response.__("route.errors.geocoding"));
+        }
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);

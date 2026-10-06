@@ -21,19 +21,25 @@ export const HIGHWAY_WHITELIST = [
     "bridleway",
 ];
 
-// Main public instance. The prototype used overpass.openstreetmap.fr, which is now whitelist-only (403);
-// if overpass-api.de answers 406, point OVERPASS_ENDPOINT at another mirror.
-export const OVERPASS_ENDPOINT = process.env.OVERPASS_ENDPOINT || "https://overpass-api.de/api/interpreter";
+// Comma-separated list, tried in order when one fails. Default: the main public instance.
+// The prototype used overpass.openstreetmap.fr, which is now whitelist-only (403).
+export const OVERPASS_ENDPOINTS = (process.env.OVERPASS_ENDPOINT || "https://overpass-api.de/api/interpreter")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
 // Overpass mirrors reject generic/anonymous User-Agents.
 export const OVERPASS_USER_AGENT = "trackmate-backend/1.0 (SafeTrack thesis, route planner)";
 export const OVERPASS_TIMEOUT_SECONDS = 120;
-// Overpass usually grants 2 query slots per IP.
+// Overpass queries running at once for the whole server. overpass-api.de grants a few slots
+// per IP (4 at the time of writing, see /api/status); 2 leaves room for retries.
 export const OVERPASS_MAX_PARALLEL = 2;
 
 export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "osm");
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
 /** Tile edge in degrees (~5.5 km north-south). */
 export const TILE_SIZE_DEG = 0.05;
+/** Built graphs kept in memory (a city-size graph is tens of MB). */
+export const GRAPH_CACHE_SIZE = 3;
 
 /** Max straight-line distance between start and destination (v1, bicycle). */
 export const MAX_PLAN_DISTANCE_METERS = 50_000;

@@ -18,3 +18,4 @@ services:
       - ANDROID_CERT_SHA256=PUT_YOUR_APP_SIGNING_SHA256
       - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter
       - OSM_CACHE_TTL_DAYS=30
+      - STADIA_API_KEY=PUT_YOUR_STADIA_API_KEY

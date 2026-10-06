@@ -86,7 +86,10 @@
 			"policy": "Criterio di percorso non supportato!",
 			"too-far": "Partenza e destinazione devono distare al massimo %s km!",
 			"no-route": "Nessun percorso trovato tra questi punti!",
-			"map-data": "Dati della mappa temporaneamente non disponibili, riprova più tardi!"
+			"map-data": "Dati della mappa temporaneamente non disponibili, riprova più tardi!",
+			"geocoding": "Ricerca dei luoghi temporaneamente non disponibile, riprova più tardi!",
+			"geocoding-disabled": "La ricerca dei luoghi non è configurata su questo server!",
+			"geocoding-limit": "Troppe ricerche, attendi un minuto e riprova!"
 		}
 	},
 	"id": "id",

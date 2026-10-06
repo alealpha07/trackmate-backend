@@ -86,7 +86,10 @@
 			"policy": "Unsupported routing policy!",
 			"too-far": "Start and destination must be at most %s km apart!",
 			"no-route": "No route found between these points!",
-			"map-data": "Map data is temporarily unavailable, try again later!"
+			"map-data": "Map data is temporarily unavailable, try again later!",
+			"geocoding": "Place search is temporarily unavailable, try again later!",
+			"geocoding-disabled": "Place search is not configured on this server!",
+			"geocoding-limit": "Too many searches, wait a minute and try again!"
 		}
 	},
 	"id": "id",

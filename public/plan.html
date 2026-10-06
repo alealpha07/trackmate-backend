@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrackMate · Planner</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/theme.css">
+    <link rel="stylesheet" href="/plan.css">
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+</head>
+<body>
+    <div id="map"></div>
+
+    <aside class="panel card">
+        <header class="panel-header">
+            <h1 data-i18n="plan.title"></h1>
+            <button id="logout" class="link-button" type="button" data-i18n="plan.logout"></button>
+        </header>
+
+        <section class="points">
+            <div class="point" data-point="start">
+                <label for="start-input"><span class="dot start"></span><span data-i18n="plan.start"></span></label>
+                <input id="start-input" autocomplete="off" data-i18n-placeholder="plan.startPlaceholder">
+                <ul class="suggestions card" hidden></ul>
+            </div>
+            <button id="swap" class="swap" type="button" data-i18n-title="plan.swap" aria-label="swap">⇅</button>
+            <div class="point" data-point="end">
+                <label for="end-input"><span class="dot end"></span><span data-i18n="plan.destination"></span></label>
+                <input id="end-input" autocomplete="off" data-i18n-placeholder="plan.destinationPlaceholder">
+                <ul class="suggestions card" hidden></ul>
+            </div>
+        </section>
+
+        <section class="options">
+            <div>
+                <label for="vehicle" data-i18n="plan.vehicle"></label>
+                <select id="vehicle">
+                    <option value="bicycle" data-i18n="plan.bicycle"></option>
+                </select>
+            </div>
+
+            <fieldset class="segmented">
+                <legend data-i18n="plan.policy"></legend>
+                <!-- Safest and the filters are enabled in Phase 3, with the Teschke weights -->
+                <label data-i18n-title="plan.comingSoon"><input type="radio" name="policy" value="safest" disabled><span data-i18n="plan.safest"></span></label>
+                <label><input type="radio" name="policy" value="shortest" checked><span data-i18n="plan.shortest"></span></label>
+            </fieldset>
+
+            <fieldset class="filters" data-i18n-title="plan.comingSoon">
+                <legend><span data-i18n="plan.filters"></span> <span class="badge" data-i18n="plan.comingSoon"></span></legend>
+                <label class="toggle"><input type="checkbox" name="cyclewaysOnly" disabled><span data-i18n="plan.cyclewaysOnly"></span></label>
+                <label class="toggle"><input type="checkbox" name="avoidUnpaved" disabled><span data-i18n="plan.avoidUnpaved"></span></label>
+                <label class="toggle"><input type="checkbox" name="avoidLts4" disabled><span data-i18n="plan.avoidLts4"></span></label>
+                <label class="toggle"><input type="checkbox" name="avoidConstruction" disabled><span data-i18n="plan.avoidConstruction"></span></label>
+            </fieldset>
+        </section>
+
+        <button id="plan" class="button plan-button" type="button" disabled><span class="spinner" aria-hidden="true"></span><span class="label" data-i18n="plan.plan"></span></button>
+        <p id="status" class="status muted" role="status" hidden></p>
+
+        <section id="result" class="result" hidden>
+            <dl>
+                <div><dt data-i18n="plan.distance"></dt><dd id="distance"></dd></div>
+                <div><dt data-i18n="plan.duration"></dt><dd id="duration"></dd></div>
+            </dl>
+            <button id="save" class="button secondary" type="button" data-i18n="plan.save"></button>
+        </section>
+    </aside>
+
+    <script type="module" src="/js/plan.js"></script>
+</body>
+</html>

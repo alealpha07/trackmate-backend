@@ -118,17 +118,10 @@ const renderPage = ({ title, meta = "", body }: { title: string; meta?: string; 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>${meta}
+    <link rel="stylesheet" href="/theme.css">
     <style>
-        :root { --primary: #6200ee; --bg: #f4f2f8; --card: #ffffff; --text: #1c1b1f; --muted: #6b6878; }
-        @media (prefers-color-scheme: dark) {
-            :root { --primary: #bb86fc; --bg: #121016; --card: #1e1b24; --text: #ece9f1; --muted: #a39fad; }
-        }
-        * { box-sizing: border-box; }
-        body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start;
-               padding: 32px 16px; background: var(--bg); color: var(--text);
-               font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-        .card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; overflow: hidden;
-                box-shadow: 0 4px 24px rgba(0, 0, 0, .08); }
+        body { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 32px 16px; }
+        .card { width: 100%; max-width: 480px; }
         header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; }
         .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff;
                   display: grid; place-items: center; font-weight: 600; }
@@ -138,8 +131,6 @@ const renderPage = ({ title, meta = "", body }: { title: string; meta?: string; 
         h1 { font-size: 1.3rem; margin: 0 0 4px; }
         .likes { margin: 0 0 12px; color: var(--muted); font-size: .9rem; }
         .description { margin: 0 0 20px; line-height: 1.5; white-space: pre-line; }
-        .button { display: block; text-align: center; padding: 14px; border-radius: 999px; background: var(--primary);
-                  color: #fff; text-decoration: none; font-weight: 600; }
         .hint { margin: 12px 0 0; text-align: center; color: var(--muted); font-size: .85rem; }
         .empty { padding: 32px 24px; text-align: center; }
     </style>
