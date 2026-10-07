@@ -1,7 +1,6 @@
-// Shared helpers for the web pages: UI strings (EN/IT, like the app) and API calls.
+// Shared helpers for the web pages: UI strings and API calls.
 
-export const LANG = (navigator.language || "en").toLowerCase().startsWith("it") ? "it" : "en";
-
+// English only for now: other languages get their own table later, picked by navigator.language
 const STRINGS = {
     en: {
         "auth.username": "Username",
@@ -23,7 +22,19 @@ const STRINGS = {
         "plan.destination": "Destination",
         "plan.startPlaceholder": "Search or tap the map",
         "plan.destinationPlaceholder": "Search or tap the map",
-        "plan.swap": "Swap start and destination",
+        "plan.stop": "Stop {0}",
+        "plan.stopPlaceholder": "Search or tap the map",
+        "plan.addStop": "+ Add stop",
+        "plan.removeStop": "Remove stop",
+        "plan.reverse": "Reverse the route",
+        "plan.mapStyle": "Map style",
+        "plan.styleOutdoors": "Outdoors",
+        "plan.styleStreets": "Streets",
+        "plan.styleLight": "Light",
+        "plan.styleDark": "Dark",
+        "plan.legLimitHint": "At most 50 km in a straight line between consecutive points.",
+        "plan.legTooFar": "{0} → {1} is {2} km in a straight line: at most 50 km between consecutive points.",
+        "plan.emptyStop": "Fill in or remove the empty stop.",
         "plan.myLocation": "My location",
         "plan.vehicle": "Vehicle",
         "plan.bicycle": "Bicycle",
@@ -37,7 +48,9 @@ const STRINGS = {
         "plan.avoidConstruction": "Avoid construction",
         "plan.comingSoon": "Coming soon",
         "plan.plan": "Plan route",
-        "plan.planning": "Planning… the first route in a new area can take up to a minute.",
+        "plan.planning": "Planning…",
+        "plan.downloading": "Downloading map data: {0} of {1} areas… new areas take a few seconds each.",
+        "plan.calculating": "Calculating the route…",
         "plan.planningShort": "Planning…",
         "plan.distance": "Distance",
         "plan.duration": "Estimated time",
@@ -49,72 +62,27 @@ const STRINGS = {
         "plan.searchingAll": "Searching all places…",
         "error.generic": "Something went wrong, try again.",
     },
-    it: {
-        "auth.username": "Nome utente",
-        "auth.password": "Password",
-        "auth.confirmPassword": "Conferma password",
-        "login.title": "Bentornato",
-        "login.subtitle": "Accedi per pianificare il tuo prossimo tracciato.",
-        "login.submit": "Accedi",
-        "login.switch": "Non hai un account?",
-        "login.switchLink": "Registrati",
-        "register.title": "Crea il tuo account",
-        "register.subtitle": "Unisciti a TrackMate per pianificare e salvare tracciati.",
-        "register.submit": "Registrati",
-        "register.switch": "Hai già un account?",
-        "register.switchLink": "Accedi",
-        "plan.title": "Pianifica un tracciato",
-        "plan.logout": "Esci",
-        "plan.start": "Partenza",
-        "plan.destination": "Destinazione",
-        "plan.startPlaceholder": "Cerca o tocca la mappa",
-        "plan.destinationPlaceholder": "Cerca o tocca la mappa",
-        "plan.swap": "Inverti partenza e destinazione",
-        "plan.myLocation": "La mia posizione",
-        "plan.vehicle": "Veicolo",
-        "plan.bicycle": "Bicicletta",
-        "plan.policy": "Percorso",
-        "plan.safest": "Più sicuro",
-        "plan.shortest": "Più breve",
-        "plan.filters": "Filtri",
-        "plan.cyclewaysOnly": "Solo piste ciclabili",
-        "plan.avoidUnpaved": "Evita sterrati",
-        "plan.avoidLts4": "Evita strade ad alto stress",
-        "plan.avoidConstruction": "Evita cantieri",
-        "plan.comingSoon": "In arrivo",
-        "plan.plan": "Calcola percorso",
-        "plan.planning": "Calcolo in corso… il primo percorso in una nuova zona può richiedere fino a un minuto.",
-        "plan.planningShort": "Calcolo…",
-        "plan.distance": "Distanza",
-        "plan.duration": "Tempo stimato",
-        "plan.save": "Salva nei miei tracciati",
-        "plan.savePrompt": "Nome del tracciato",
-        "plan.saved": "Salvato nei tuoi tracciati!",
-        "plan.noResults": "Nessun luogo trovato",
-        "plan.searchAll": "Cerca in tutti i luoghi (più lento) ↵",
-        "plan.searchingAll": "Ricerca in tutti i luoghi…",
-        "error.generic": "Qualcosa è andato storto, riprova.",
-    },
 };
 
-export function t(key) {
-    return STRINGS[LANG][key] ?? STRINGS.en[key] ?? key;
+/** UI string for `key`; {0}, {1}… are replaced by `args`. */
+export function t(key, ...args) {
+    const text = STRINGS.en[key] ?? key;
+    return text.replace(/\{(\d+)\}/g, (match, i) => (i < args.length ? String(args[i]) : match));
 }
 
 /** Fills elements marked with data-i18n (text), data-i18n-placeholder and data-i18n-title. */
 export function applyTranslations(root = document) {
-    document.documentElement.lang = LANG;
     root.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
     root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder)));
     root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle)));
 }
 
-/** Calls the backend with the session cookie and `lang`, so server messages come back translated.
+/** Calls the backend with the session cookie (server messages come back in English, the default locale).
  * Throws an Error carrying the server message and `status` on non-2xx responses.
  * `signal` (optional) cancels the request: it then rejects with an AbortError. */
 export async function api(method, url, body, { signal } = {}) {
     const isForm = body instanceof FormData;
-    const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}lang=${LANG}`, {
+    const res = await fetch(url, {
         method,
         credentials: "same-origin",
         headers: body && !isForm ? { "Content-Type": "application/json" } : undefined,
@@ -123,10 +91,41 @@ export async function api(method, url, body, { signal } = {}) {
     });
     const isJson = (res.headers.get("content-type") || "").includes("application/json");
     const data = isJson ? await res.json() : await res.text();
-    if (!res.ok) {
-        const error = new Error(typeof data === "string" && data ? data : t("error.generic"));
-        error.status = res.status;
-        throw error;
-    }
+    if (!res.ok) throw apiError(typeof data === "string" ? data : "", res.status);
     return data;
+}
+
+function apiError(message, status) {
+    const error = new Error(message || t("error.generic"));
+    error.status = status;
+    return error;
+}
+
+/** Like api(), for endpoints that stream NDJSON with `?stream=1`: `onMessage` gets every line as
+ * it arrives. A line with `error` (sent after the stream started) throws like a failed api() call. */
+export async function apiStream(method, url, body, { signal, onMessage }) {
+    const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}stream=1`, {
+        method,
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+    });
+    if (!res.ok) throw apiError(await res.text(), res.status);
+
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = "";
+    for (;;) {
+        const { value, done } = await reader.read();
+        buffer += value ?? "";
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // incomplete last line, if any
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            const message = JSON.parse(line);
+            if (message.error) throw apiError(message.error, message.status);
+            onMessage(message);
+        }
+        if (done) return;
+    }
 }

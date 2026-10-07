@@ -1,56 +1,77 @@
-/* TrackMate web theme: same tokens as the app and the shared-post page */
+/* TrackMate web theme, matching the Android app (MaterialComponents, res/values/colors.xml):
+   teal primary for the UI, the app's purple only for things drawn on the map, navy headings from the logo.
+   Light only for now (a dark theme can come back later). */
 :root {
-    --primary: #6200ee;
+    --primary: #048a95;        /* primary_500 */
+    --primary-dark: #036b70;   /* primary_700, status bar */
+    --primary-light: #60c3ca;  /* primary_200 */
+    --primary-text: #048a95;   /* teal as text (links, labels) */
+    --primary-tint: rgba(4, 138, 149, .12);
     --on-primary: #ffffff;
-    --bg: #f4f2f8;
-    --card: #ffffff;
-    --text: #1c1b1f;
-    --muted: #6b6878;
-    --border: #e3e0ea;
-    --error: #b3261e;
-    --start: #1b873f;
-    --radius: 16px;
-    --shadow: 0 4px 24px rgba(0, 0, 0, .08);
+    --map-accent: #6200ee;     /* route lines, location and A/B markers in the app */
+    --heading: #141c5c;        /* navy of the logo's wordmark */
+    --bg: #f5f5f5;
+    --surface: #ffffff;
+    --field: rgba(0, 0, 0, .05);
+    --text: #212121;
+    --muted: #757575;
+    --divider: #e0e0e0;
+    --field-line: rgba(0, 0, 0, .42);
+    --error: #b00020;
+    --radius: 4px;
+    --shadow: 0 2px 1px -1px rgba(0, 0, 0, .2), 0 1px 1px rgba(0, 0, 0, .14), 0 1px 3px rgba(0, 0, 0, .12);
+    --shadow-raised: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px rgba(0, 0, 0, .14), 0 1px 18px rgba(0, 0, 0, .12);
+    --font: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-    :root {
-        --primary: #bb86fc;
-        --bg: #121016;
-        --card: #1e1b24;
-        --text: #ece9f1;
-        --muted: #a39fad;
-        --border: #34303c;
-        --error: #f2b8b5;
-        --start: #6fdc8c;
-        color-scheme: dark;
-    }
-}
-
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text);
-       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.4; }
 [hidden] { display: none !important; }
 
-.card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-.button { display: block; width: 100%; padding: 14px; border: 0; border-radius: 999px; background: var(--primary);
-          color: var(--on-primary); text-align: center; text-decoration: none; font: inherit; font-weight: 600; cursor: pointer; }
-.button:disabled { opacity: .5; cursor: default; }
-.button.secondary { background: transparent; color: var(--primary); box-shadow: inset 0 0 0 1.5px var(--primary); }
-.link-button { border: 0; background: none; padding: 0; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; }
+.card { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+
+/* Teal top bar, like the app's action bar */
+.app-bar { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px;
+           background: var(--primary); color: var(--on-primary); }
+.app-bar .app-icon { width: 32px; height: 32px; border-radius: var(--radius); }
+.app-bar h1 { flex: 1; margin: 0; font-size: 1.25rem; font-weight: 500; }
+
+/* Material buttons: 4px corners, uppercase medium labels */
+.button { display: block; width: 100%; min-height: 40px; padding: 10px 16px; border: 0; border-radius: var(--radius);
+          background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow);
+          font: 500 .875rem/1.4 var(--font); letter-spacing: .09em; text-transform: uppercase;
+          text-align: center; text-decoration: none; cursor: pointer; }
+.button:hover { background: var(--primary-dark); }
+.button:disabled { background: var(--divider); color: var(--muted); box-shadow: none; cursor: default; }
+.button.secondary { background: transparent; color: var(--primary-text); box-shadow: inset 0 0 0 1px var(--divider); }
+.button.secondary:hover { background: var(--primary-tint); }
+.text-button { padding: 6px 8px; border: 0; border-radius: var(--radius); background: none; color: var(--primary-text);
+               font: 500 .875rem/1.4 var(--font); letter-spacing: .09em; text-transform: uppercase; cursor: pointer; }
+.text-button:hover { background: var(--primary-tint); }
+.app-bar .text-button { color: var(--on-primary); }
+.app-bar .text-button:hover { background: rgba(255, 255, 255, .16); }
+/* Round outlined icon button, like the edit button on a saved track */
+.icon-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0;
+               border: 2px solid var(--primary); border-radius: 50%; background: none; color: var(--primary-text);
+               font-size: 1rem; cursor: pointer; }
+.icon-button:hover { background: var(--primary-tint); }
+a { color: var(--primary-text); }
 .muted { color: var(--muted); }
 .error { color: var(--error); }
 
-label { display: block; margin: 0 0 6px; color: var(--muted); font-size: .85rem; }
-input, select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px;
-                background: var(--bg); color: inherit; font: inherit; }
-input:focus, select:focus { outline: none; border-color: var(--primary); }
+/* Filled text fields: tinted box, underline that turns teal on focus */
+label { display: block; margin: 0 0 4px; color: var(--muted); font-size: .8rem; }
+:focus-within > label { color: var(--primary-text); }
+input, select { width: 100%; padding: 12px; border: 0; border-bottom: 1px solid var(--field-line);
+                border-radius: var(--radius) var(--radius) 0 0; background: var(--field); color: inherit; font: inherit; }
+input:focus, select:focus { outline: none; border-bottom: 2px solid var(--primary); padding-bottom: 11px; }
 
 /* Login / register */
 .center-page { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 32px 16px; }
 .auth { width: 100%; max-width: 400px; padding: 24px; }
-.auth h1 { margin: 0 0 4px; font-size: 1.5rem; }
-.auth .subtitle { margin: 0 0 24px; }
+.auth .logo { display: block; width: 96px; height: 96px; margin: 0 auto 16px; }
+.auth h1 { margin: 0 0 4px; color: var(--heading); font-size: 1.5rem; font-weight: 500; text-align: center; }
+.auth .subtitle { margin: 0 0 24px; text-align: center; }
 .auth form { display: grid; gap: 16px; }
 .auth .switch { margin: 20px 0 0; text-align: center; }
-.auth .switch a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.auth .switch a { font-weight: 500; text-decoration: none; }

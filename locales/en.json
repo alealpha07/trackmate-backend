@@ -81,15 +81,21 @@
 	},
 	"route": {
 		"errors": {
-			"coordinates": "Invalid start or destination coordinates!",
+			"coordinates": "Invalid coordinates for the start, a stop or the destination!",
 			"vehicle": "Unsupported vehicle!",
 			"policy": "Unsupported routing policy!",
-			"too-far": "Start and destination must be at most %s km apart!",
-			"no-route": "No route found between these points!",
+			"leg-too-far": "The leg %s is %s km in a straight line: at most %s km are allowed between consecutive points!",
+			"no-route-leg": "No route found for the leg %s!",
+			"map-data-partial": "Map data only partly downloaded (%s of %s areas). Plan again to continue the download!",
 			"map-data": "Map data is temporarily unavailable, try again later!",
 			"geocoding": "Place search is temporarily unavailable, try again later!",
 			"geocoding-disabled": "Place search is not configured on this server!",
 			"geocoding-limit": "Too many searches, wait a minute and try again!"
+		},
+		"points": {
+			"start": "start",
+			"stop": "stop %s",
+			"end": "destination"
 		}
 	},
 	"id": "id",

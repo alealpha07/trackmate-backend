@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TrackMate · Planner</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="/img/icon.webp">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="/theme.css">
     <link rel="stylesheet" href="/plan.css">
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -14,59 +17,81 @@
     <div id="map"></div>
 
     <aside class="panel card">
-        <header class="panel-header">
+        <header class="app-bar">
+            <img class="app-icon" src="/img/icon.webp" alt="">
             <h1 data-i18n="plan.title"></h1>
-            <button id="logout" class="link-button" type="button" data-i18n="plan.logout"></button>
+            <button id="logout" class="text-button" type="button" data-i18n="plan.logout"></button>
         </header>
 
-        <section class="points">
-            <div class="point" data-point="start">
-                <label for="start-input"><span class="dot start"></span><span data-i18n="plan.start"></span></label>
-                <input id="start-input" autocomplete="off" data-i18n-placeholder="plan.startPlaceholder">
-                <ul class="suggestions card" hidden></ul>
-            </div>
-            <button id="swap" class="swap" type="button" data-i18n-title="plan.swap" aria-label="swap">⇅</button>
-            <div class="point" data-point="end">
-                <label for="end-input"><span class="dot end"></span><span data-i18n="plan.destination"></span></label>
-                <input id="end-input" autocomplete="off" data-i18n-placeholder="plan.destinationPlaceholder">
-                <ul class="suggestions card" hidden></ul>
-            </div>
-        </section>
+        <div class="panel-body">
+            <section class="points">
+                <!-- Start, stops (from #stop-template, added before the destination) and destination, in route order -->
+                <ol id="point-list" class="point-list">
+                    <li class="point" data-role="start">
+                        <label for="start-input"><span class="pin">A</span><span data-i18n="plan.start"></span></label>
+                        <input id="start-input" autocomplete="off" data-i18n-placeholder="plan.startPlaceholder">
+                        <ul class="suggestions card" hidden></ul>
+                    </li>
+                    <li class="point" data-role="end">
+                        <label for="end-input"><span class="pin">B</span><span data-i18n="plan.destination"></span></label>
+                        <input id="end-input" autocomplete="off" data-i18n-placeholder="plan.destinationPlaceholder">
+                        <ul class="suggestions card" hidden></ul>
+                    </li>
+                </ol>
+                <div class="point-actions">
+                    <button id="add-stop" class="text-button" type="button" data-i18n="plan.addStop"></button>
+                    <button id="reverse" class="icon-button" type="button" data-i18n-title="plan.reverse" aria-label="reverse">⇅</button>
+                </div>
+                <p class="hint muted" data-i18n="plan.legLimitHint"></p>
+            </section>
 
-        <section class="options">
-            <div>
-                <label for="vehicle" data-i18n="plan.vehicle"></label>
-                <select id="vehicle">
-                    <option value="bicycle" data-i18n="plan.bicycle"></option>
-                </select>
-            </div>
+            <template id="stop-template">
+                <li class="point" data-role="stop">
+                    <label><span class="pin"></span><span class="name"></span></label>
+                    <div class="field">
+                        <input autocomplete="off" data-i18n-placeholder="plan.stopPlaceholder">
+                        <button class="remove" type="button" data-i18n-title="plan.removeStop" aria-label="remove">×</button>
+                    </div>
+                    <ul class="suggestions card" hidden></ul>
+                </li>
+            </template>
 
-            <fieldset class="segmented">
-                <legend data-i18n="plan.policy"></legend>
-                <!-- Safest and the filters are enabled in Phase 3, with the Teschke weights -->
-                <label data-i18n-title="plan.comingSoon"><input type="radio" name="policy" value="safest" disabled><span data-i18n="plan.safest"></span></label>
-                <label><input type="radio" name="policy" value="shortest" checked><span data-i18n="plan.shortest"></span></label>
-            </fieldset>
+            <section class="options">
+                <div>
+                    <label for="vehicle" data-i18n="plan.vehicle"></label>
+                    <select id="vehicle">
+                        <option value="bicycle" data-i18n="plan.bicycle"></option>
+                    </select>
+                </div>
 
-            <fieldset class="filters" data-i18n-title="plan.comingSoon">
-                <legend><span data-i18n="plan.filters"></span> <span class="badge" data-i18n="plan.comingSoon"></span></legend>
-                <label class="toggle"><input type="checkbox" name="cyclewaysOnly" disabled><span data-i18n="plan.cyclewaysOnly"></span></label>
-                <label class="toggle"><input type="checkbox" name="avoidUnpaved" disabled><span data-i18n="plan.avoidUnpaved"></span></label>
-                <label class="toggle"><input type="checkbox" name="avoidLts4" disabled><span data-i18n="plan.avoidLts4"></span></label>
-                <label class="toggle"><input type="checkbox" name="avoidConstruction" disabled><span data-i18n="plan.avoidConstruction"></span></label>
-            </fieldset>
-        </section>
+                <fieldset class="segmented">
+                    <legend data-i18n="plan.policy"></legend>
+                    <!-- Safest and the filters are enabled in Phase 3, with the Teschke weights -->
+                    <label data-i18n-title="plan.comingSoon"><input type="radio" name="policy" value="safest" disabled><span data-i18n="plan.safest"></span></label>
+                    <label><input type="radio" name="policy" value="shortest" checked><span data-i18n="plan.shortest"></span></label>
+                </fieldset>
 
-        <button id="plan" class="button plan-button" type="button" disabled><span class="spinner" aria-hidden="true"></span><span class="label" data-i18n="plan.plan"></span></button>
-        <p id="status" class="status muted" role="status" hidden></p>
+                <fieldset class="filters" data-i18n-title="plan.comingSoon">
+                    <legend><span data-i18n="plan.filters"></span> <span class="badge" data-i18n="plan.comingSoon"></span></legend>
+                    <label class="toggle"><input type="checkbox" name="cyclewaysOnly" disabled><span data-i18n="plan.cyclewaysOnly"></span></label>
+                    <label class="toggle"><input type="checkbox" name="avoidUnpaved" disabled><span data-i18n="plan.avoidUnpaved"></span></label>
+                    <label class="toggle"><input type="checkbox" name="avoidLts4" disabled><span data-i18n="plan.avoidLts4"></span></label>
+                    <label class="toggle"><input type="checkbox" name="avoidConstruction" disabled><span data-i18n="plan.avoidConstruction"></span></label>
+                </fieldset>
+            </section>
 
-        <section id="result" class="result" hidden>
-            <dl>
-                <div><dt data-i18n="plan.distance"></dt><dd id="distance"></dd></div>
-                <div><dt data-i18n="plan.duration"></dt><dd id="duration"></dd></div>
-            </dl>
-            <button id="save" class="button secondary" type="button" data-i18n="plan.save"></button>
-        </section>
+            <button id="plan" class="button plan-button" type="button" disabled><span class="spinner" aria-hidden="true"></span><span class="label" data-i18n="plan.plan"></span></button>
+            <p id="status" class="status muted" role="status" hidden></p>
+
+            <section id="result" class="result" hidden>
+                <dl>
+                    <div><dt data-i18n="plan.distance"></dt><dd id="distance"></dd></div>
+                    <div><dt data-i18n="plan.duration"></dt><dd id="duration"></dd></div>
+                </dl>
+                <ol id="legs" class="legs" hidden></ol>
+                <button id="save" class="button secondary" type="button" data-i18n="plan.save"></button>
+            </section>
+        </div>
     </aside>
 
     <script type="module" src="/js/plan.js"></script>

@@ -54,6 +54,8 @@ app.use(passport.session());
 app.use(express.json());
 // Web planner pages (/plan, /login, /register) and their assets
 app.use(express.static(path.join(__dirname, "..", "public"), { extensions: ["html"] }));
+// The web planner is the only web page for now: send visitors there (or to log in first)
+app.get("/", (request, response) => response.redirect(request.isAuthenticated() ? "/plan" : "/login"));
 
 // #endregion
 

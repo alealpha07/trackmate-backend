@@ -38,8 +38,10 @@ export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
 /** Tile edge in degrees (~5.5 km north-south). */
 export const TILE_SIZE_DEG = 0.05;
-/** Built graphs kept in memory (a city-size graph is tens of MB). */
-export const GRAPH_CACHE_SIZE = 3;
+/** Built graphs (one per leg) kept in memory, bounded by their total edge count. Measured at
+ * ~400 bytes per edge with its adjacency (Berlin, 9 tiles: 410k edges), so ~400 MB: about six
+ * rural legs or two dense-city ones. The latest graph is always kept. */
+export const GRAPH_CACHE_MAX_EDGES = 1_000_000;
 
 /** Max straight-line distance between start and destination (v1, bicycle). */
 export const MAX_PLAN_DISTANCE_METERS = 50_000;

@@ -4,6 +4,7 @@ import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
 import { MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
 import { planRoute } from "../routing/plan";
+import { PartialDownloadError } from "../routing/tileCache";
 import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
 import { LatLng } from "../routing/types";
 
@@ -17,8 +18,27 @@ function parseLatLng(value: any): LatLng | null {
     return { lat, lng };
 }
 
-// Plan a route between two points
+/** Name of point `index` of `count` in server messages: start, stop N, destination. */
+function pointName(response: Response, index: number, count: number): string {
+    if (index === 0) return response.__("route.points.start");
+    if (index === count - 1) return response.__("route.points.end");
+    return response.__("route.points.stop", String(index));
+}
+
+/** "start → stop 1" */
+function legName(response: Response, leg: number, count: number): string {
+    return `${pointName(response, leg, count)} → ${pointName(response, leg + 1, count)}`;
+}
+
+// Plan a route from start to end, through the optional stops in `via` (in order).
+// With ?stream=1 the answer is NDJSON: {"progress":{"done","total"}} lines while map data
+// downloads (keeps proxies from timing out), then {"route":…} or {"error","status"}.
 router.post("/plan", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+    const stream = request.query.stream === "1";
+    const fail = (status: number, message: string) => {
+        if (!response.headersSent) return response.status(status).send(message);
+        response.end(JSON.stringify({ error: message, status }) + "\n");
+    };
     try {
         const requiredParams = ["start", "end", "vehicle", "policy"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
@@ -26,42 +46,73 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        const start = parseLatLng(sanitizedParams.start);
-        const end = parseLatLng(sanitizedParams.end);
-        if (!start || !end) {
+        const via = request.body.via ?? [];
+        if (!Array.isArray(via)) {
             return response.status(422).send(response.__("route.errors.coordinates"));
         }
+        const points = [sanitizedParams.start, ...via, sanitizedParams.end].map(parseLatLng);
+        if (points.some((point) => !point)) {
+            return response.status(422).send(response.__("route.errors.coordinates"));
+        }
+        const route = points as LatLng[];
         if (!VEHICLES.includes(sanitizedParams.vehicle)) {
             return response.status(422).send(response.__("route.errors.vehicle"));
         }
         if (!POLICIES.includes(sanitizedParams.policy)) {
             return response.status(422).send(response.__("route.errors.policy"));
         }
-        if (haversineMeters(start.lat, start.lng, end.lat, end.lng) > MAX_PLAN_DISTANCE_METERS) {
-            return response.status(422).send(response.__("route.errors.too-far", String(MAX_PLAN_DISTANCE_METERS / 1000)));
+        // The cap is per leg (each leg has its own BBOX), there is no total
+        for (let i = 0; i < route.length - 1; i++) {
+            const meters = haversineMeters(route[i].lat, route[i].lng, route[i + 1].lat, route[i + 1].lng);
+            if (meters > MAX_PLAN_DISTANCE_METERS) {
+                return response.status(422).send(response.__(
+                    "route.errors.leg-too-far",
+                    legName(response, i, route.length),
+                    (meters / 1000).toFixed(1),
+                    String(MAX_PLAN_DISTANCE_METERS / 1000),
+                ));
+            }
         }
 
         // The page aborts its previous request when the user re-plans: stop waiting for its map data
         const controller = new AbortController();
-        response.on("close", () => {
+        const abort = () => {
             if (!response.writableFinished) controller.abort();
-        });
+        };
+        response.on("close", abort);
+        // A client hanging up shows first as the socket's "end", a loop turn before "close"
+        const socket = request.socket;
+        socket.once("end", abort);
+        response.on("close", () => socket.off("end", abort));
 
-        let route;
+        let onProgress: ((done: number, total: number) => void) | undefined;
+        if (stream) {
+            response.status(200).type("application/x-ndjson");
+            response.setHeader("Cache-Control", "no-cache");
+            response.setHeader("X-Accel-Buffering", "no"); // nginx: don't buffer the progress lines
+            response.flushHeaders();
+            onProgress = (done, total) => response.write(JSON.stringify({ progress: { done, total } }) + "\n");
+        }
+
+        let planned;
         try {
-            route = await planRoute(start, end, controller.signal);
+            planned = await planRoute(route, controller.signal, onProgress);
         } catch (error) {
             if ((error as Error).name === "AbortError") return;
             console.error(`Route planning failed: ${(error as Error).message}`);
-            return response.status(502).send(response.__("route.errors.map-data"));
+            if (error instanceof PartialDownloadError && error.downloaded > 0) {
+                return fail(502, response.__("route.errors.map-data-partial", String(error.downloaded), String(error.total)));
+            }
+            return fail(502, response.__("route.errors.map-data"));
         }
-        if (!route) {
-            return response.status(422).send(response.__("route.errors.no-route"));
+        if ("unreachableLeg" in planned) {
+            return fail(422, response.__("route.errors.no-route-leg", legName(response, planned.unreachableLeg, route.length)));
         }
 
-        response.json(route);
+        if (stream) response.end(JSON.stringify({ route: planned }) + "\n");
+        else response.json(planned);
     } catch (error) {
-        response.status(500).send(response.__("server.error"));
+        fail(500, response.__("server.error"));
         console.error(error);
     }
 })

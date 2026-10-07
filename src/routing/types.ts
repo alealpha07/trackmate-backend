@@ -77,10 +77,16 @@ export interface TrackPoint {
     speed: number;
 }
 
-export interface PlannedRoute {
-    track: TrackPoint[];
+/** One part of a route, between two consecutive points (start, stops, destination). */
+export interface RouteLeg {
     /** Meters. */
     distance: number;
     /** Seconds, estimated at the display cycling speed. */
     duration: number;
+}
+
+export interface PlannedRoute extends RouteLeg {
+    track: TrackPoint[];
+    /** One per pair of consecutive points. Not part of the saved track file. */
+    legs: RouteLeg[];
 }

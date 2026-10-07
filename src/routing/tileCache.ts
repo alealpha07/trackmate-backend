@@ -28,6 +28,7 @@ const TTL_MS = OSM_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 const jobs = new Map<string, TileJob>();
 const queue: TileJob[] = [];
 let running = 0;
+const PUMP_DELAY_MS = 50;
 
 function tileKey(tile: Tile): string {
     return `${tile.x}_${tile.y}`;
@@ -99,7 +100,10 @@ function pump() {
             .finally(() => {
                 running--;
                 jobs.delete(job.key);
-                pump();
+                // Parsing and writing a big tile blocks the event loop, and a client that hung up
+                // meanwhile is only noticed in the next I/O poll. Timers run before that poll and
+                // setImmediate after it: start the next job only once its waiters are up to date
+                setTimeout(() => setImmediate(pump), PUMP_DELAY_MS);
             });
     }
 }
@@ -167,42 +171,63 @@ export interface LoadedTiles {
     elements: () => OverpassElement[];
 }
 
-/** Makes sure every tile covering the box is on disk (fetching missing or stale ones from Overpass).
+/** Thrown when some tiles could not be downloaded. The ones that were stay cached,
+ * so planning again only fetches what is still missing. */
+export class PartialDownloadError extends Error {
+    constructor(message: string, public downloaded: number, public total: number) {
+        super(message);
+    }
+}
+
+/** Makes sure every tile covering any of the boxes (one per leg) is on disk, fetching missing or
+ * stale ones from Overpass, then returns one reader per box. Nothing is returned until every tile
+ * is there: a route is never planned on partial map data.
  * Ways crossing a tile border appear in both tiles, so ways and nodes are deduplicated by OSM id.
- * Rejects with an AbortError when `signal` aborts (the client went away). */
-export async function loadTiles(bbox: BBox, signal: AbortSignal): Promise<LoadedTiles> {
-    const tiles = tilesFor(bbox);
+ * `onProgress(done, total)` counts downloaded tiles. Rejects with an AbortError when `signal`
+ * aborts (the client went away). */
+export async function loadTiles(
+    bboxes: BBox[],
+    signal: AbortSignal,
+    onProgress?: (done: number, total: number) => void,
+): Promise<LoadedTiles[]> {
+    const perBox = bboxes.map(tilesFor);
+    // Legs share tiles around each stop: download each tile once
+    const unique = new Map(perBox.flat().map((tile) => [tileKey(tile), tile]));
+    const missing = [...unique.values()].filter((tile) => !isFresh(tilePath(tile)));
+
     // If one tile fails, release the others this request was waiting for
     const local = new AbortController();
     const onAbort = () => local.abort();
     signal.addEventListener("abort", onAbort, { once: true });
 
-    const fetched = new Map<string, OverpassElement[]>();
+    let done = 0;
+    onProgress?.(done, missing.length);
     try {
-        await Promise.all(tiles.filter((tile) => !isFresh(tilePath(tile))).map(async (tile) => {
-            fetched.set(tileKey(tile), await loadTile(tile, local.signal));
+        await Promise.all(missing.map(async (tile) => {
+            await loadTile(tile, local.signal);
+            onProgress?.(++done, missing.length);
         }));
     } catch (error) {
         local.abort();
-        throw signal.aborted ? abortError() : error;
+        if (signal.aborted) throw abortError();
+        throw new PartialDownloadError((error as Error).message, done, missing.length);
     } finally {
         signal.removeEventListener("abort", onAbort);
     }
 
-    return {
+    // Read back from disk per leg, so a long route never holds every tile in memory at once
+    return perBox.map((tiles) => ({
         key: tileSetKey(tiles),
         elements: () => {
             const nodes = new Map<number, OverpassNode>();
             const ways = new Map<number, OverpassWay>();
             for (const tile of tiles) {
-                // Tiles that fell back to a stale copy, or were just fetched, are read from memory
-                const elements = fetched.get(tileKey(tile)) ?? readTileFile(tilePath(tile));
-                for (const el of elements) {
+                for (const el of readTileFile(tilePath(tile))) {
                     if (el.type === "node") nodes.set(el.id, el);
                     else if (el.type === "way") ways.set(el.id, el);
                 }
             }
             return [...nodes.values(), ...ways.values()];
         },
-    };
+    }));
 }
