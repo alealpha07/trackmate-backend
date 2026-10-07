@@ -81,15 +81,21 @@
 	},
 	"route": {
 		"errors": {
-			"coordinates": "Coordinate di partenza o destinazione non valide!",
+			"coordinates": "Coordinate non valide per la partenza, una tappa o la destinazione!",
 			"vehicle": "Veicolo non supportato!",
 			"policy": "Criterio di percorso non supportato!",
-			"too-far": "Partenza e destinazione devono distare al massimo %s km!",
-			"no-route": "Nessun percorso trovato tra questi punti!",
+			"leg-too-far": "Il tratto %s è di %s km in linea d'aria: tra due punti consecutivi sono ammessi al massimo %s km!",
+			"no-route-leg": "Nessun percorso trovato per il tratto %s!",
+			"map-data-partial": "Dati della mappa scaricati solo in parte (%s di %s zone). Ricalcola per continuare lo scaricamento!",
 			"map-data": "Dati della mappa temporaneamente non disponibili, riprova più tardi!",
 			"geocoding": "Ricerca dei luoghi temporaneamente non disponibile, riprova più tardi!",
 			"geocoding-disabled": "La ricerca dei luoghi non è configurata su questo server!",
 			"geocoding-limit": "Troppe ricerche, attendi un minuto e riprova!"
+		},
+		"points": {
+			"start": "partenza",
+			"stop": "tappa %s",
+			"end": "destinazione"
 		}
 	},
 	"id": "id",

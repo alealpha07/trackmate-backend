@@ -21,6 +21,9 @@ out skel qt;
 // retry 429 and 5xx on the next endpoint, other 4xx fail
 const RETRY_STATUSES = [429, 502, 503, 504];
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
+// on 429 wait for the free slot from /api/status
+const MAX_SLOT_WAITS = 10;
+const MAX_SLOT_WAIT_SECONDS = 60;
 
 function errorSummary(html: string): string {
     const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -39,25 +42,68 @@ async function query(endpoint: string, body: string): Promise<OverpassElement[]>
     });
     if (!res.ok) {
         const error = new Error(`${res.status} ${res.statusText} ${errorSummary(await res.text())}`.trim());
+        (error as any).status = res.status;
         (error as any).retryable = RETRY_STATUSES.includes(res.status);
         throw error;
     }
     return ((await res.json()) as OverpassResponse).elements;
 }
 
+// parses the /api/status slot lines
+async function secondsUntilSlot(endpoint: string): Promise<number | null> {
+    try {
+        const res = await fetch(endpoint.replace(/\/interpreter\/?$/, "/status"), {
+            headers: { "User-Agent": OVERPASS_USER_AGENT },
+            signal: AbortSignal.timeout(10_000),
+        });
+        if (!res.ok) return null;
+        const text = await res.text();
+        const available = text.match(/(\d+) slots? available now/);
+        if (available && Number(available[1]) > 0) return 0;
+        const waits = [...text.matchAll(/in (-?\d+) seconds?/g)].map((m) => Number(m[1]));
+        return waits.length > 0 ? Math.max(0, Math.min(...waits)) : null;
+    } catch {
+        return null;
+    }
+}
+
+async function wait(ms: number, stillWanted: () => boolean): Promise<void> {
+    const end = Date.now() + ms;
+    while (Date.now() < end && stillWanted()) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(1_000, end - Date.now())));
+    }
+}
+
 export async function fetchOverpass(bbox: BBox, stillWanted: () => boolean = () => true): Promise<OverpassElement[]> {
     const body = "data=" + encodeURIComponent(buildQuery(bbox));
-    for (let attempt = 0; ; attempt++) {
+    let attempt = 0;
+    let slotWaits = 0;
+    for (;;) {
         const endpoint = OVERPASS_ENDPOINTS[attempt % OVERPASS_ENDPOINTS.length];
         try {
             return await query(endpoint, body);
         } catch (error: any) {
-            // network errors are temporary too
-            const retryable = error.retryable ?? true;
             const message = `Overpass ${new URL(endpoint).host}: ${error.message}`;
-            if (!retryable || attempt >= RETRY_DELAYS_MS.length || !stillWanted()) throw new Error(message);
-            console.warn(`${message} (retry ${attempt + 1}/${RETRY_DELAYS_MS.length})`);
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+            if (!stillWanted()) throw new Error(message);
+
+            let delayMs: number | null = null;
+            if (error.status === 429 && slotWaits < MAX_SLOT_WAITS) {
+                const seconds = await secondsUntilSlot(endpoint);
+                if (seconds !== null) {
+                    slotWaits++;
+                    delayMs = (Math.min(seconds, MAX_SLOT_WAIT_SECONDS) + 1) * 1000;
+                    console.warn(`${message} (waiting ${delayMs / 1000} s for a free slot)`);
+                }
+            }
+            if (delayMs === null) {
+                // network errors are temporary too
+                const retryable = error.retryable ?? true;
+                if (!retryable || attempt >= RETRY_DELAYS_MS.length) throw new Error(message);
+                delayMs = RETRY_DELAYS_MS[attempt];
+                attempt++;
+                console.warn(`${message} (retry ${attempt}/${RETRY_DELAYS_MS.length})`);
+            }
+            await wait(delayMs, stillWanted);
             if (!stillWanted()) throw new Error(`${message} (no longer needed, not retrying)`);
         }
     }

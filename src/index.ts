@@ -53,6 +53,8 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "public"), { extensions: ["html"] }));
+// the planner is the only web page for now
+app.get("/", (request, response) => response.redirect(request.isAuthenticated() ? "/plan" : "/login"));
 
 // #endregion
 

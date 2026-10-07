@@ -1,4 +1,4 @@
-import { api, applyTranslations, t, LANG } from "./common.js";
+import { api, apiStream, applyTranslations, t } from "./common.js";
 
 applyTranslations();
 
@@ -15,15 +15,34 @@ const DEFAULT_CENTER = [10.3279, 44.8015]; // Parma
 const DEFAULT_ZOOM = 13;
 const SEARCH_MIN_CHARS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
+// same limit as the server
+const MAX_LEG_METERS = 50_000;
+const EARTH_RADIUS_METERS = 6_371_008.8;
 
 // no api key needed, stadia uses domain auth
 const ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> '
     + '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
     + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
-const darkScheme = matchMedia("(prefers-color-scheme: dark)");
+const MAP_STYLES = [
+    { id: "outdoors", label: "plan.styleOutdoors" },
+    { id: "osm_bright", label: "plan.styleStreets" },
+    { id: "alidade_smooth", label: "plan.styleLight" },
+    { id: "alidade_smooth_dark", label: "plan.styleDark" },
+];
+const MAP_STYLE_KEY = "trackmate.mapStyle";
+// same icon as the app
+const LAYERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>';
 
-function tileUrls() {
-    const style = darkScheme.matches ? "alidade_smooth_dark" : "outdoors";
+function savedMapStyle() {
+    try {
+        const id = localStorage.getItem(MAP_STYLE_KEY);
+        return MAP_STYLES.find((style) => style.id === id)?.id ?? MAP_STYLES[0].id;
+    } catch {
+        return MAP_STYLES[0].id;
+    }
+}
+
+function tileUrls(style) {
     const retina = devicePixelRatio > 1 ? "@2x" : "";
     return [`https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/{y}${retina}.png`];
 }
@@ -40,49 +59,96 @@ const map = new maplibregl.Map({
     style: {
         version: 8,
         sources: {
-            basemap: { type: "raster", tiles: tileUrls(), tileSize: 256, maxzoom: 20, attribution: ATTRIBUTION },
+            basemap: { type: "raster", tiles: tileUrls(savedMapStyle()), tileSize: 256, maxzoom: 20, attribution: ATTRIBUTION },
             route: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
         },
         layers: [
             { id: "basemap", type: "raster", source: "basemap" },
             {
-                id: "route-casing", type: "line", source: "route",
-                layout: { "line-cap": "round", "line-join": "round" },
-                paint: { "line-color": cssVar("--card"), "line-width": 9 },
-            },
-            {
                 id: "route", type: "line", source: "route",
                 layout: { "line-cap": "round", "line-join": "round" },
-                paint: { "line-color": cssVar("--primary"), "line-width": 5 },
+                paint: { "line-color": cssVar("--map-accent"), "line-width": 5 },
             },
         ],
     },
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-darkScheme.addEventListener("change", () => {
-    map.getSource("basemap").setTiles(tileUrls());
-    map.setPaintProperty("route", "line-color", cssVar("--primary"));
-    map.setPaintProperty("route-casing", "line-color", cssVar("--card"));
-    // marker colours come from the theme, redraw them
-    for (const which of ["start", "end"]) {
-        removeMarker(which);
-        drawMarker(which);
+class LayersControl {
+    onAdd() {
+        const container = document.createElement("div");
+        container.className = "maplibregl-ctrl maplibregl-ctrl-group layers";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.title = t("plan.mapStyle");
+        button.setAttribute("aria-label", t("plan.mapStyle"));
+        button.setAttribute("aria-expanded", "false");
+        button.innerHTML = LAYERS_ICON;
+
+        const menu = document.createElement("div");
+        menu.className = "layers-menu card";
+        menu.setAttribute("role", "radiogroup");
+        menu.setAttribute("aria-label", t("plan.mapStyle"));
+        menu.hidden = true;
+        const title = document.createElement("p");
+        title.textContent = t("plan.mapStyle");
+        menu.append(title);
+        const current = savedMapStyle();
+        for (const style of MAP_STYLES) {
+            const label = document.createElement("label");
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = "map-style";
+            radio.value = style.id;
+            radio.checked = style.id === current;
+            radio.addEventListener("change", () => {
+                map.getSource("basemap").setTiles(tileUrls(style.id));
+                try {
+                    localStorage.setItem(MAP_STYLE_KEY, style.id);
+                } catch {
+                    // not remembered, fine
+                }
+                toggle(false);
+            });
+            label.append(radio, t(style.label));
+            menu.append(label);
+        }
+
+        const toggle = (open) => {
+            menu.hidden = !open;
+            button.setAttribute("aria-expanded", String(open));
+        };
+        button.addEventListener("click", () => toggle(menu.hidden));
+        document.addEventListener("click", (event) => {
+            if (!container.contains(event.target)) toggle(false);
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") toggle(false);
+        });
+
+        container.append(button, menu);
+        return container;
     }
-});
+
+    onRemove() {}
+}
+map.addControl(new LayersControl(), "top-right");
 
 // #region state
-const points = { start: null, end: null }; // { lat, lng, label }
-const markers = { start: null, end: null };
-let activeField = "start"; // which field a map tap fills
+const rows = [];
+let activeRow = null; // the row a map tap fills
 let currentRoute = null;
 let planSequence = 0; // ignore responses of outdated requests
 let planController = null; // to cancel the previous plan request
 
-const inputs = { start: document.getElementById("start-input"), end: document.getElementById("end-input") };
+const pointList = document.getElementById("point-list");
+const stopTemplate = document.getElementById("stop-template");
 const planButton = document.getElementById("plan");
 const status = document.getElementById("status");
 const result = document.getElementById("result");
+const legsList = document.getElementById("legs");
+const pointsHint = document.querySelector(".points .hint");
 const saveButton = document.getElementById("save");
 // #endregion
 
@@ -90,41 +156,94 @@ function formatCoordinates({ lat, lng }) {
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
-function removeMarker(which) {
-    markers[which]?.remove();
-    markers[which] = null;
+function pointText(point) {
+    return point ? point.label || formatCoordinates(point) : "";
 }
 
-function drawMarker(which) {
-    const point = points[which];
-    if (!point) return;
-    if (!markers[which]) {
-        markers[which] = new maplibregl.Marker({ color: cssVar(which === "start" ? "--start" : "--primary"), draggable: true })
-            .setLngLat([point.lng, point.lat])
-            .addTo(map);
-        markers[which].on("dragend", () => {
-            const { lat, lng } = markers[which].getLngLat();
-            setPoint(which, { lat, lng, label: null });
+const isStop = (row) => row !== rows[0] && row !== rows[rows.length - 1];
+
+function rowName(index) {
+    if (index === 0) return t("plan.start");
+    if (index === rows.length - 1) return t("plan.destination");
+    return t("plan.stop", index);
+}
+
+function removeMarker(row) {
+    row.marker?.remove();
+    row.marker = null;
+}
+
+function pinLabel(row) {
+    if (row === rows[0]) return "A";
+    if (row === rows[rows.length - 1]) return "B";
+    return String(rows.indexOf(row));
+}
+
+function drawMarker(row) {
+    if (!row.point) return;
+    if (!row.marker) {
+        const element = document.createElement("div");
+        element.className = "map-pin";
+        element.textContent = pinLabel(row);
+        row.marker = new maplibregl.Marker({ element, draggable: true }).setLngLat([row.point.lng, row.point.lat]).addTo(map);
+        row.marker.on("dragend", () => {
+            const { lat, lng } = row.marker.getLngLat();
+            setPoint(row, { lat, lng, label: null });
         });
     } else {
-        markers[which].setLngLat([point.lng, point.lat]);
+        row.marker.setLngLat([row.point.lng, row.point.lat]);
     }
 }
 
-function setPoint(which, point, { fly = false } = {}) {
-    points[which] = point;
-    inputs[which].value = point ? point.label || formatCoordinates(point) : "";
-    if (point) drawMarker(which);
-    else removeMarker(which);
+function setPoint(row, point, { fly = false } = {}) {
+    row.point = point;
+    row.input.value = pointText(point);
+    if (point) drawMarker(row);
+    else removeMarker(row);
     if (fly && point) map.flyTo({ center: [point.lng, point.lat], zoom: Math.max(map.getZoom(), 14) });
     routeChanged();
+}
+
+function renumberStops() {
+    rows.forEach((row, index) => {
+        if (!isStop(row)) return;
+        row.element.querySelector(".name").textContent = rowName(index);
+        row.element.querySelector(".pin").textContent = pinLabel(row);
+        if (row.marker) row.marker.getElement().textContent = pinLabel(row);
+    });
 }
 
 function routeChanged() {
     cancelPlanning();
     clearRoute();
     showStatus("");
+    const problem = routeProblem();
+    pointsHint.textContent = problem ?? t("plan.legLimitHint");
+    pointsHint.classList.toggle("error", problem !== null);
     setPlanning(false);
+}
+
+function routeProblem() {
+    rows.forEach((row) => row.element.classList.remove("too-far"));
+    if (!rows[0].point || !rows[rows.length - 1].point) return null; // nothing to say yet
+    if (rows.some((row) => !row.point)) return t("plan.emptyStop");
+    for (let i = 0; i < rows.length - 1; i++) {
+        const meters = haversineMeters(rows[i].point, rows[i + 1].point);
+        if (meters > MAX_LEG_METERS) {
+            rows[i].element.classList.add("too-far");
+            rows[i + 1].element.classList.add("too-far");
+            const km = new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(meters / 1000);
+            return t("plan.legTooFar", rowName(i), rowName(i + 1), km);
+        }
+    }
+    return null;
+}
+
+function haversineMeters(a, b) {
+    const rad = (deg) => (deg * Math.PI) / 180;
+    const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2
+        + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+    return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(h));
 }
 
 function cancelPlanning() {
@@ -137,7 +256,7 @@ function setPlanning(planning) {
     planButton.classList.toggle("loading", planning);
     planButton.setAttribute("aria-busy", String(planning));
     planButton.querySelector(".label").textContent = t(planning ? "plan.planningShort" : "plan.plan");
-    planButton.disabled = planning || !(points.start && points.end);
+    planButton.disabled = planning || rows.some((row) => !row.point) || routeProblem() !== null;
 }
 
 function clearRoute() {
@@ -153,7 +272,7 @@ function showStatus(text, isError = false) {
 }
 
 function formatDistance(meters) {
-    const km = new Intl.NumberFormat(LANG, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(meters / 1000);
+    const km = new Intl.NumberFormat("en", { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(meters / 1000);
     return `${km} km`;
 }
 
@@ -174,29 +293,34 @@ function selectedOptions() {
 }
 
 async function plan() {
-    if (!points.start || !points.end) return;
+    if (rows.some((row) => !row.point) || routeProblem()) return;
     cancelPlanning();
     const sequence = planSequence;
     planController = new AbortController();
     clearRoute();
     setPlanning(true);
     showStatus(t("plan.planning"));
+    const [start, ...rest] = rows.map((row) => ({ lat: row.point.lat, lng: row.point.lng }));
+    const end = rest.pop();
     try {
-        const route = await api("POST", "/route/plan", {
-            start: { lat: points.start.lat, lng: points.start.lng },
-            end: { lat: points.end.lat, lng: points.end.lng },
-            ...selectedOptions(),
-        }, { signal: planController.signal });
+        let route = null;
+        await apiStream("POST", "/route/plan", { start, via: rest, end, ...selectedOptions() }, {
+            signal: planController.signal,
+            onMessage: (message) => {
+                if (sequence !== planSequence) return;
+                if (message.route) route = message.route;
+                // show the map data download progress
+                const progress = message.progress;
+                if (progress?.total > 0) {
+                    showStatus(progress.done < progress.total
+                        ? t("plan.downloading", progress.done, progress.total)
+                        : t("plan.calculating"));
+                }
+            },
+        });
         if (sequence !== planSequence) return;
-        currentRoute = route;
-        const coordinates = route.track.map((p) => [p.lng, p.lat]);
-        map.getSource("route").setData({ type: "Feature", geometry: { type: "LineString", coordinates }, properties: {} });
-        const bounds = coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
-        map.fitBounds(bounds, { padding: fitPadding(), maxZoom: 16 });
-        document.getElementById("distance").textContent = formatDistance(route.distance);
-        document.getElementById("duration").textContent = formatDuration(route.duration);
-        result.hidden = false;
-        showStatus("");
+        if (!route) throw new Error(t("error.generic"));
+        showRoute(route);
     } catch (err) {
         if (sequence !== planSequence || err.name === "AbortError") return;
         if (err.status === 401) return location.replace("/login");
@@ -206,6 +330,32 @@ async function plan() {
     }
 }
 
+function showRoute(route) {
+    currentRoute = route;
+    const coordinates = route.track.map((p) => [p.lng, p.lat]);
+    map.getSource("route").setData({ type: "Feature", geometry: { type: "LineString", coordinates }, properties: {} });
+    const bounds = coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+    map.fitBounds(bounds, { padding: fitPadding(), maxZoom: 16 });
+    document.getElementById("distance").textContent = formatDistance(route.distance);
+    document.getElementById("duration").textContent = formatDuration(route.duration);
+
+    // With stops, also show each leg
+    legsList.replaceChildren(...(route.legs.length > 1 ? route.legs : []).map((leg, i) => {
+        const li = document.createElement("li");
+        const name = document.createElement("span");
+        name.className = "leg-name";
+        name.textContent = `${rowName(i)} → ${rowName(i + 1)}`;
+        const value = document.createElement("span");
+        value.className = "leg-value";
+        value.textContent = `${formatDistance(leg.distance)} · ${formatDuration(leg.duration)}`;
+        li.append(name, value);
+        return li;
+    }));
+    legsList.hidden = route.legs.length < 2;
+    result.hidden = false;
+    showStatus("");
+}
+
 function fitPadding() {
     const panel = document.querySelector(".panel").getBoundingClientRect();
     if (innerWidth <= 640) return { top: 60, right: 40, left: 40, bottom: panel.height + 40 };
@@ -213,9 +363,8 @@ function fitPadding() {
 }
 
 // #region place search
-function setupSearch(which) {
-    const input = inputs[which];
-    const list = input.parentElement.querySelector(".suggestions");
+function setupSearch(row) {
+    const { input, list } = row;
     let timer = null;
     let searchSequence = 0;
     let fullText = null; // text of the last full search
@@ -246,7 +395,7 @@ function setupSearch(which) {
         for (const item of items) {
             list.append(listButton(item.label, () => {
                 hide();
-                setPoint(which, item, { fly: true });
+                setPoint(row, item, { fly: true });
             }, "result"));
         }
         // stadia misses small villages
@@ -286,7 +435,7 @@ function setupSearch(which) {
         search(text, true);
     }
 
-    input.addEventListener("focus", () => (activeField = which));
+    input.addEventListener("focus", () => (activeRow = row));
     input.addEventListener("blur", hide);
     input.addEventListener("keydown", (event) => {
         if (event.key === "Escape") hide();
@@ -303,25 +452,59 @@ function setupSearch(which) {
         timer = setTimeout(() => search(text, false), SEARCH_DEBOUNCE_MS);
     });
 }
-setupSearch("start");
-setupSearch("end");
+// #endregion
+
+// #region rows
+function createRow(element) {
+    const row = { element, input: element.querySelector("input"), list: element.querySelector(".suggestions"), point: null, marker: null };
+    setupSearch(row);
+    return row;
+}
+
+function addStop() {
+    const element = stopTemplate.content.firstElementChild.cloneNode(true);
+    applyTranslations(element);
+    const row = createRow(element);
+    element.querySelector(".remove").addEventListener("click", () => removeStop(row));
+    pointList.insertBefore(element, rows[rows.length - 1].element);
+    rows.splice(rows.length - 1, 0, row);
+    renumberStops();
+    activeRow = row;
+    row.input.focus();
+    routeChanged();
+}
+
+function removeStop(row) {
+    removeMarker(row);
+    row.element.remove();
+    rows.splice(rows.indexOf(row), 1);
+    renumberStops();
+    if (activeRow === row) activeRow = firstEmptyRow() ?? rows[rows.length - 1];
+    routeChanged();
+}
+
+const firstEmptyRow = () => rows.find((row) => !row.point) ?? null;
+
+for (const element of pointList.querySelectorAll(".point")) rows.push(createRow(element));
+activeRow = rows[0];
 // #endregion
 
 map.on("click", (event) => {
-    const which = activeField;
-    if (which === "start" && !points.end) activeField = "end";
-    setPoint(which, { lat: event.lngLat.lat, lng: event.lngLat.lng, label: null });
+    const row = activeRow;
+    setPoint(row, { lat: event.lngLat.lat, lng: event.lngLat.lng, label: null });
+    activeRow = firstEmptyRow() ?? row;
 });
 
-document.getElementById("swap").addEventListener("click", () => {
-    const { start, end } = points;
-    points.start = end;
-    points.end = start;
-    for (const which of ["start", "end"]) {
-        removeMarker(which);
-        inputs[which].value = points[which] ? points[which].label || formatCoordinates(points[which]) : "";
-        drawMarker(which);
-    }
+document.getElementById("add-stop").addEventListener("click", addStop);
+
+document.getElementById("reverse").addEventListener("click", () => {
+    const reversed = rows.map((row) => row.point).reverse();
+    rows.forEach((row, i) => {
+        removeMarker(row);
+        row.point = reversed[i];
+        row.input.value = pointText(row.point);
+        drawMarker(row);
+    });
     routeChanged();
 });
 
@@ -330,7 +513,7 @@ document.querySelectorAll("input[name=policy], .filters input, #vehicle").forEac
 
 saveButton.addEventListener("click", async () => {
     if (!currentRoute) return;
-    const defaultName = [points.start, points.end].map((p) => p.label || formatCoordinates(p)).join(" → ");
+    const defaultName = rows.map((row) => pointText(row.point)).join(" → ");
     const name = prompt(t("plan.savePrompt"), defaultName)?.trim();
     if (!name) return;
     saveButton.disabled = true;
@@ -338,7 +521,9 @@ saveButton.addEventListener("click", async () => {
     try {
         trackId = (await api("POST", "/track", { name })).id;
         const form = new FormData();
-        form.append("file", new Blob([JSON.stringify(currentRoute)], { type: "application/json" }), "track.json");
+        // legs are only for this page, the file keeps the app format
+        const { track, distance, duration } = currentRoute;
+        form.append("file", new Blob([JSON.stringify({ track, distance, duration })], { type: "application/json" }), "track.json");
         await api("POST", `/track/file?id=${trackId}`, form);
         showStatus(t("plan.saved"));
     } catch (err) {
@@ -357,11 +542,11 @@ document.getElementById("logout").addEventListener("click", async () => {
 
 navigator.geolocation?.getCurrentPosition(
     (position) => {
-        if (points.start) return;
+        if (rows[0].point) return;
         const here = { lat: position.coords.latitude, lng: position.coords.longitude, label: t("plan.myLocation") };
         map.jumpTo({ center: [here.lng, here.lat], zoom: 14 });
-        setPoint("start", here);
-        activeField = "end";
+        setPoint(rows[0], here);
+        if (activeRow === rows[0]) activeRow = firstEmptyRow() ?? rows[0];
     },
     () => {},
     { enableHighAccuracy: true, timeout: 10_000 },

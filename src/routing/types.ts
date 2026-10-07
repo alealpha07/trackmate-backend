@@ -75,10 +75,15 @@ export interface TrackPoint {
     speed: number;
 }
 
-export interface PlannedRoute {
-    track: TrackPoint[];
+export interface RouteLeg {
     // meters
     distance: number;
     // seconds
     duration: number;
+}
+
+export interface PlannedRoute extends RouteLeg {
+    track: TrackPoint[];
+    // not saved in the track file
+    legs: RouteLeg[];
 }

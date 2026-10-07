@@ -1,18 +1,19 @@
 import { planningBBox } from "./bbox";
 import { buildGraph } from "./buildGraph";
-import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_SIZE } from "./config";
+import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
 import { buildAdjacency, dijkstra } from "./dijkstra";
 import { nearestNode } from "./nearestNode";
 import { loadTiles } from "./tileCache";
-import { GraphEdge, LatLng, PlannedRoute, RoutingGraph } from "./types";
+import { GraphEdge, LatLng, PlannedRoute, RouteLeg, RoutingGraph, TrackPoint } from "./types";
 
 interface CachedGraph {
     graph: RoutingGraph;
     adjacency: Map<string, GraphEdge[]>;
 }
 
-// reuse graphs when planning again in the same area
+// one graph per leg, moving a stop rebuilds only its legs
 const graphCache = new Map<string, CachedGraph>();
+let cachedEdges = 0;
 
 function cachedGraph(key: string, build: () => CachedGraph): CachedGraph {
     let entry = graphCache.get(key);
@@ -21,37 +22,61 @@ function cachedGraph(key: string, build: () => CachedGraph): CachedGraph {
         graphCache.delete(key);
     } else {
         entry = build();
-        if (graphCache.size >= GRAPH_CACHE_SIZE) graphCache.delete(graphCache.keys().next().value!);
+        cachedEdges += entry.graph.edges.length;
+        // drop least recently used graphs until it fits
+        while (cachedEdges > GRAPH_CACHE_MAX_EDGES && graphCache.size > 0) {
+            const [oldestKey, oldest] = graphCache.entries().next().value!;
+            graphCache.delete(oldestKey);
+            cachedEdges -= oldest.graph.edges.length;
+        }
     }
     graphCache.set(key, entry);
     return entry;
 }
 
+function leg(distance: number): RouteLeg {
+    return { distance, duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6) };
+}
+
 // each leg gets its own graph, legs are joined end to end
-export async function planRoute(start: LatLng, end: LatLng, signal: AbortSignal): Promise<PlannedRoute | null> {
-    const bbox = planningBBox(start, end);
-    const tiles = await loadTiles(bbox, signal);
-    const { graph, adjacency } = cachedGraph(tiles.key, () => {
-        const graph = buildGraph(tiles.elements(), bbox);
-        return { graph, adjacency: buildAdjacency(graph) };
-    });
+export async function planRoute(
+    points: LatLng[],
+    signal: AbortSignal,
+    onProgress?: (done: number, total: number) => void,
+): Promise<PlannedRoute | { unreachableLeg: number }> {
+    const boxes = points.slice(1).map((end, i) => planningBBox(points[i], end));
+    const legTiles = await loadTiles(boxes, signal, onProgress);
 
-    const startId = nearestNode(graph, start.lat, start.lng);
-    const endId = nearestNode(graph, end.lat, end.lng);
-    if (!startId || !endId) return null;
+    const track: TrackPoint[] = [];
+    const legs: RouteLeg[] = [];
+    let joint: string | null = null; // node where the previous leg ended
+    for (let i = 0; i < boxes.length; i++) {
+        // let other requests in between legs
+        if (i > 0) await new Promise((resolve) => setImmediate(resolve));
+        signal.throwIfAborted();
 
-    const result = dijkstra(adjacency, startId, endId);
-    if (!result) return null;
+        const { key, elements } = legTiles[i];
+        const { graph, adjacency } = cachedGraph(key, () => {
+            const graph = buildGraph(elements(), boxes[i]);
+            return { graph, adjacency: buildAdjacency(graph) };
+        });
 
-    const distance = result.totalDistanceMeters;
-    return {
-        track: result.nodeIds.map((id) => ({
-            lat: graph.nodes[id].lat,
-            lng: graph.nodes[id].lon,
-            timestamp: 0,
-            speed: 0,
-        })),
-        distance,
-        duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6),
-    };
+        // legs join exactly at the stop
+        const startId = joint !== null && graph.nodes[joint] ? joint : nearestNode(graph, points[i].lat, points[i].lng);
+        const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng);
+        if (!startId || !endId) return { unreachableLeg: i };
+
+        const result = dijkstra(adjacency, startId, endId);
+        if (!result) return { unreachableLeg: i };
+
+        const nodeIds = result.nodeIds[0] === joint ? result.nodeIds.slice(1) : result.nodeIds;
+        for (const id of nodeIds) {
+            track.push({ lat: graph.nodes[id].lat, lng: graph.nodes[id].lon, timestamp: 0, speed: 0 });
+        }
+        legs.push(leg(result.totalDistanceMeters));
+        joint = endId;
+    }
+
+    const distance = legs.reduce((sum, l) => sum + l.distance, 0);
+    return { track, ...leg(distance), legs };
 }

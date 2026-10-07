@@ -35,7 +35,8 @@ export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
 // degrees, about 5.5 km
 export const TILE_SIZE_DEG = 0.05;
-export const GRAPH_CACHE_SIZE = 3;
+// bounded by total edges, about 400 MB
+export const GRAPH_CACHE_MAX_EDGES = 1_000_000;
 
 export const MAX_PLAN_DISTANCE_METERS = 50_000;
 // box buffer
