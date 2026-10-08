@@ -123,6 +123,12 @@ export function hasConstruction(tags: Tags): boolean {
     return tags.construction !== undefined && tags.construction !== "no";
 }
 
+// tram rails along the roadway
+export function hasEmbeddedRails(tags: Tags): boolean {
+    if (tags.railway === "tram") return true;
+    return Object.entries(tags).some(([key, value]) => key.startsWith("embedded_rails") && value !== "no" && /[^|]/.test(value));
+}
+
 // km/h from a number, mph or an implicit limit like IT:urban
 function parseSpeed(value: string | undefined): number | null {
     if (!value) return null;

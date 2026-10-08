@@ -7,6 +7,12 @@ export const HIGHWAY_WHITELIST = [
     "primary",
     "secondary",
     "tertiary",
+    // links, without them big junctions have gaps
+    "motorway_link",
+    "trunk_link",
+    "primary_link",
+    "secondary_link",
+    "tertiary_link",
     "unclassified",
     "residential",
     "living_street",
@@ -19,6 +25,9 @@ export const HIGHWAY_WHITELIST = [
     "steps",
     "bridleway",
 ];
+
+// railways that make a crossing at grade
+export const RAILWAYS = ["tram", "rail", "light_rail", "narrow_gauge"];
 
 // comma separated, tried in order
 export const OVERPASS_ENDPOINTS = (process.env.OVERPASS_ENDPOINT || "https://overpass-api.de/api/interpreter")
@@ -55,4 +64,4 @@ export const DEFAULT_LANES = 2;
 export const VEHICLES = ["bicycle"];
 // safest: least injury risk, shortest: least distance
 export const POLICIES = ["safest", "shortest"];
-export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4", "avoidConstruction"] as const;
+export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4"] as const;

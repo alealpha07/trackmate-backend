@@ -51,7 +51,6 @@ export interface GraphEdge {
     lts: Lts;
     bikeway: boolean;
     unpaved: boolean;
-    construction: boolean;
 }
 
 export interface GraphNode {

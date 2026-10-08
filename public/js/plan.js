@@ -154,6 +154,16 @@ function formatCoordinates({ lat, lng }) {
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
+// accepts "44.8, 10.3", "44.8 10.3" and "44,8; 10,3"
+function parseCoordinates(text) {
+    const match = text.match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/)
+        ?? text.match(/^(-?\d+(?:,\d+)?)\s*[;\s]\s*(-?\d+(?:,\d+)?)$/);
+    if (!match) return null;
+    const [lat, lng] = [match[1], match[2]].map((value) => Number(value.replace(",", ".")));
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { lat, lng, label: null };
+}
+
 function pointText(point) {
     return point ? point.label || formatCoordinates(point) : "";
 }
@@ -280,9 +290,18 @@ function formatDuration(seconds) {
     return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min`;
 }
 
+function updateFilterGroups() {
+    const vehicle = document.getElementById("vehicle").value;
+    const policy = document.querySelector("input[name=policy]:checked").value;
+    document.querySelectorAll(".filters").forEach((group) => {
+        const { vehicle: forVehicle, policy: forPolicy } = group.dataset;
+        group.hidden = (forVehicle && forVehicle !== vehicle) || (forPolicy && forPolicy !== policy);
+    });
+}
+
 function selectedOptions() {
     const filters = {};
-    document.querySelectorAll(".filters input").forEach((input) => (filters[input.name] = input.checked));
+    document.querySelectorAll(".filters:not([hidden]) input").forEach((input) => (filters[input.name] = input.checked));
     return {
         vehicle: document.getElementById("vehicle").value,
         policy: document.querySelector("input[name=policy]:checked").value,
@@ -433,11 +452,24 @@ function setupSearch(row) {
         search(text, true);
     }
 
+    function useCoordinates() {
+        const text = input.value.trim();
+        const coordinates = parseCoordinates(text);
+        if (!coordinates) return false;
+        hide();
+        // unchanged text, keep the point
+        if (text !== pointText(row.point)) setPoint(row, coordinates, { fly: true });
+        return true;
+    }
+
     input.addEventListener("focus", () => (activeRow = row));
-    input.addEventListener("blur", hide);
+    input.addEventListener("blur", () => {
+        hide();
+        if (!useCoordinates()) input.value = pointText(row.point);
+    });
     input.addEventListener("keydown", (event) => {
         if (event.key === "Escape") hide();
-        if (event.key !== "Enter") return;
+        if (event.key !== "Enter" || useCoordinates()) return;
         // first enter searches all places, second picks the first result
         if (fullText === input.value.trim() && !list.hidden) list.querySelector("button.result")?.click();
         else searchAll();
@@ -447,6 +479,8 @@ function setupSearch(row) {
         fullText = null;
         const text = input.value.trim();
         if (text.length < SEARCH_MIN_CHARS) return hide();
+        const coordinates = parseCoordinates(text);
+        if (coordinates) return render([{ ...coordinates, label: formatCoordinates(coordinates) }], true);
         timer = setTimeout(() => search(text, false), SEARCH_DEBOUNCE_MS);
     });
 }
@@ -507,7 +541,9 @@ document.getElementById("reverse").addEventListener("click", () => {
 });
 
 planButton.addEventListener("click", plan);
+document.querySelectorAll("input[name=policy], #vehicle").forEach((el) => el.addEventListener("change", updateFilterGroups));
 document.querySelectorAll("input[name=policy], .filters input, #vehicle").forEach((el) => el.addEventListener("change", routeChanged));
+updateFilterGroups();
 
 saveButton.addEventListener("click", async () => {
     if (!currentRoute) return;

@@ -1,25 +1,25 @@
-import { HIGHWAY_WHITELIST, OVERPASS_ENDPOINTS, OVERPASS_TIMEOUT_SECONDS, OVERPASS_USER_AGENT } from "./config";
+import { HIGHWAY_WHITELIST, OVERPASS_ENDPOINTS, OVERPASS_TIMEOUT_SECONDS, OVERPASS_USER_AGENT, RAILWAYS } from "./config";
 import { BBox, OverpassElement, OverpassResponse } from "./types";
 
 function buildQuery(bbox: BBox): string {
     const box = [bbox.south, bbox.west, bbox.north, bbox.east].map((v) => v.toFixed(6)).join(",");
     return `
 [out:json][timeout:${OVERPASS_TIMEOUT_SECONDS}];
-(
-  way["highway"~"^(${HIGHWAY_WHITELIST.join("|")})$"]
-     ["highway"!="proposed"]
-     ["highway"!="construction"]
-     ["area"!="yes"]
-     (${box});
-);
-out body;
->;
+way["highway"~"^(${HIGHWAY_WHITELIST.join("|")})$"]
+   ["highway"!="proposed"]
+   ["highway"!="construction"]
+   ["area"!="yes"]
+   (${box})->.roads;
+way["railway"~"^(${RAILWAYS.join("|")})$"](${box})->.rails;
+.roads out body;
+.rails out body;
+.roads >;
 out skel qt;
 `.trim();
 }
 
 // retry 429 and 5xx on the next endpoint, other 4xx fail
-const RETRY_STATUSES = [429, 502, 503, 504];
+const isRetryableStatus = (status: number) => status === 429 || status >= 500;
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 // on 429 wait for the free slot from /api/status
 const MAX_SLOT_WAITS = 10;
@@ -43,7 +43,7 @@ async function query(endpoint: string, body: string): Promise<OverpassElement[]>
     if (!res.ok) {
         const error = new Error(`${res.status} ${res.statusText} ${errorSummary(await res.text())}`.trim());
         (error as any).status = res.status;
-        (error as any).retryable = RETRY_STATUSES.includes(res.status);
+        (error as any).retryable = isRetryableStatus(res.status);
         throw error;
     }
     return ((await res.json()) as OverpassResponse).elements;

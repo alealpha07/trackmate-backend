@@ -35,6 +35,7 @@ export const ROUTE_TYPE_OR: Record<RouteType, number> = {
 
 export const HAZARD_OR = {
     construction: 1.93,
+    tracks: 3.04,               // tram or train tracks
 };
 
 // streets without marked lanes
