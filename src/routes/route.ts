@@ -2,7 +2,9 @@ import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
 import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
-import { MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
+import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
+import { Policy } from "../routing/edgeWeight";
+import { RouteFilters } from "../routing/filters";
 import { planRoute } from "../routing/plan";
 import { PartialDownloadError } from "../routing/tileCache";
 import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
@@ -16,6 +18,17 @@ function parseLatLng(value: any): LatLng | null {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
     return { lat, lng };
+}
+
+function parseFilters(value: any): RouteFilters | null {
+    if (value === undefined || value === null) return {};
+    if (typeof value !== "object" || Array.isArray(value)) return null;
+    const filters: RouteFilters = {};
+    for (const [name, on] of Object.entries(value)) {
+        if (!(FILTERS as readonly string[]).includes(name) || typeof on !== "boolean") return null;
+        filters[name as keyof RouteFilters] = on;
+    }
+    return filters;
 }
 
 function pointName(response: Response, index: number, count: number): string {
@@ -57,6 +70,10 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
         if (!POLICIES.includes(sanitizedParams.policy)) {
             return response.status(422).send(response.__("route.errors.policy"));
         }
+        const filters = parseFilters(request.body.filters);
+        if (!filters) {
+            return response.status(422).send(response.__("route.errors.filters"));
+        }
         // per leg, no total
         for (let i = 0; i < route.length - 1; i++) {
             const meters = haversineMeters(route[i].lat, route[i].lng, route[i + 1].lat, route[i + 1].lng);
@@ -92,7 +109,7 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
 
         let planned;
         try {
-            planned = await planRoute(route, controller.signal, onProgress);
+            planned = await planRoute(route, { policy: sanitizedParams.policy as Policy, filters }, controller.signal, onProgress);
         } catch (error) {
             if ((error as Error).name === "AbortError") return;
             console.error(`Route planning failed: ${(error as Error).message}`);
@@ -102,7 +119,10 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
             return fail(502, response.__("route.errors.map-data"));
         }
         if ("unreachableLeg" in planned) {
-            return fail(422, response.__("route.errors.no-route-leg", legName(response, planned.unreachableLeg, route.length)));
+            const leg = legName(response, planned.unreachableLeg, route.length);
+            // with filters on, usually a gap in the allowed roads
+            const filtered = Object.values(filters).some(Boolean);
+            return fail(422, response.__(filtered ? "route.errors.no-route-filters" : "route.errors.no-route-leg", leg));
         }
 
         if (stream) response.end(JSON.stringify({ route: planned }) + "\n");

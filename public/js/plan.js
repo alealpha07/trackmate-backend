@@ -106,9 +106,7 @@ class LayersControl {
                 map.getSource("basemap").setTiles(tileUrls(style.id));
                 try {
                     localStorage.setItem(MAP_STYLE_KEY, style.id);
-                } catch {
-                    // not remembered, fine
-                }
+                } catch {}
                 toggle(false);
             });
             label.append(radio, t(style.label));

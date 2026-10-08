@@ -35,15 +35,24 @@ export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
 // degrees, about 5.5 km
 export const TILE_SIZE_DEG = 0.05;
-// bounded by total edges, about 400 MB
+// bounded by total edges, about 475 MB
 export const GRAPH_CACHE_MAX_EDGES = 1_000_000;
 
+// same default as OSRM
+export const SMALL_COMPONENT_SIZE = 1000;
+
 export const MAX_PLAN_DISTANCE_METERS = 50_000;
-// box buffer
+// leg box buffer
 export const BBOX_BUFFER_METERS = 2_000;
 
 // only for the displayed duration (OSRM bicycle default)
 export const DISPLAY_CYCLING_SPEED_KMH = 15;
 
+// used when a road has no speed limit or lanes mapped
+export const DEFAULT_MAXSPEED_KMH = 50;
+export const DEFAULT_LANES = 2;
+
 export const VEHICLES = ["bicycle"];
-export const POLICIES = ["shortest"];
+// safest: least injury risk, shortest: least distance
+export const POLICIES = ["safest", "shortest"];
+export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4", "avoidConstruction"] as const;

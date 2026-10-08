@@ -1,5 +1,9 @@
 import { GraphEdge } from "./types";
 
-export function edgeWeight(edge: GraphEdge): number {
-    return edge.distance;
+export type Policy = "safest" | "shortest";
+
+// safest: length times injury risk, shortest: length
+export function edgeCost(policy: Policy): (edge: GraphEdge) => number {
+    if (policy === "safest") return (edge) => edge.distance * edge.risk;
+    return (edge) => edge.distance;
 }

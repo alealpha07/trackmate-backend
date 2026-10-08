@@ -1,3 +1,6 @@
+import { Lts } from "./lts";
+import { RouteType } from "./riskTable";
+
 export interface LatLng {
     lat: number;
     lng: number;
@@ -33,18 +36,6 @@ export interface OverpassResponse {
     elements: OverpassElement[];
 }
 
-export interface EdgeTags {
-    highway?: string;
-    surface?: string;
-    smoothness?: string;
-    lit?: string;
-    bicycle?: string;
-    cycleway?: string;
-    sac_scale?: string;
-    oneway?: string;
-    name?: string;
-}
-
 export interface GraphEdge {
     id: string;
     // OSM node id
@@ -53,12 +44,20 @@ export interface GraphEdge {
     to: number;
     // meters
     distance: number;
-    tags: EdgeTags;
+    routeType: RouteType;
+    // road type times hazards
+    risk: number;
+    // traffic stress (lts.ts)
+    lts: Lts;
+    bikeway: boolean;
+    unpaved: boolean;
+    construction: boolean;
 }
 
 export interface GraphNode {
     lat: number;
     lon: number;
+    snappable?: boolean;
 }
 
 export interface RoutingGraph {
@@ -80,6 +79,8 @@ export interface RouteLeg {
     distance: number;
     // seconds
     duration: number;
+    // sum of distance times risk (the safest cost)
+    risk: number;
 }
 
 export interface PlannedRoute extends RouteLeg {

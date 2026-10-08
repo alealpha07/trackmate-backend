@@ -1,39 +1,38 @@
 import { haversineMeters } from "./haversine";
-import { BBox, EdgeTags, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph } from "./types";
-
-function pickTags(tags: Record<string, string> = {}): EdgeTags {
-    return {
-        highway: tags.highway,
-        surface: tags.surface,
-        smoothness: tags.smoothness,
-        lit: tags.lit,
-        bicycle: tags.bicycle,
-        cycleway: tags.cycleway ?? tags["cycleway:both"] ?? tags["cycleway:right"] ?? tags["cycleway:left"],
-        sac_scale: tags.sac_scale,
-        oneway: tags.oneway,
-        name: tags.name,
-    };
-}
+import { levelOfTrafficStress } from "./lts";
+import {
+    Direction, Tags, bicycleAllowed, bicycleDirection, bikeInfra, hasConstruction, hasParkedCars, isPaved,
+} from "./osmTags";
+import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable";
+import { BBox, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph } from "./types";
 
 // footways only when bikes are allowed, never steps
-function isRoutable(tags: EdgeTags): boolean {
+function isRoutable(tags: Tags): boolean {
     const highway = tags.highway;
     if (!highway || highway === "steps") return false;
     if (tags.bicycle === "no" || tags.bicycle === "private") return false;
-    if ((highway === "footway" || highway === "pedestrian") && !["yes", "designated", "permissive"].includes(tags.bicycle ?? "")) {
-        return false;
-    }
+    if ((highway === "footway" || highway === "pedestrian") && !bicycleAllowed(tags)) return false;
+    const motorOnly = /^(motorway|trunk)(_link)?$/.test(highway) || tags.motorroad === "yes";
+    if (motorOnly && !bicycleAllowed(tags)) return false;
+    if (["no", "private"].includes(tags.access ?? "") && !bicycleAllowed(tags)) return false;
     return true;
 }
 
-// bikes are often exempt from a car one-way (contraflow)
-function isBicycleExemptFromOneway(tags: Record<string, string> = {}): boolean {
-    return (
-        tags["oneway:bicycle"] === "no" ||
-        tags.cycleway === "opposite" ||
-        tags["cycleway:left"] === "opposite" ||
-        tags.highway === "cycleway"
-    );
+function edgeProfile(tags: Tags, direction: Direction) {
+    const infra = bikeInfra(tags, direction);
+    const parked = hasParkedCars(tags, direction);
+    const paved = isPaved(tags);
+    const construction = hasConstruction(tags);
+    const type = routeType(tags, infra, parked, paved);
+    return {
+        routeType: type,
+        risk: ROUTE_TYPE_OR[type] * (construction ? HAZARD_OR.construction : 1),
+        lts: levelOfTrafficStress(tags, direction, infra, parked),
+        bikeway: type === "cycle_track" || type === "bike_path" || type === "local_bike_route"
+            || infra === "lane" || tags.bicycle === "designated",
+        unpaved: !paved,
+        construction,
+    };
 }
 
 export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGraph {
@@ -48,12 +47,12 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
     const edges: GraphEdge[] = [];
 
     for (const way of ways) {
-        const tags = pickTags(way.tags);
+        const tags = way.tags ?? {};
         if (!isRoutable(tags)) continue;
 
-        const oneway = tags.oneway === "yes" || tags.oneway === "true" || tags.oneway === "1";
-        const onewayReverse = tags.oneway === "-1";
-        const bikeExempt = isBicycleExemptFromOneway(way.tags);
+        const only = bicycleDirection(tags);
+        const forward = only === "backward" ? null : edgeProfile(tags, "forward");
+        const backward = only === "forward" ? null : edgeProfile(tags, "backward");
 
         for (let i = 0; i < way.nodes.length - 1; i++) {
             const a = nodeById.get(way.nodes[i]);
@@ -66,12 +65,8 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
             usedNodeIds.add(a.id);
             usedNodeIds.add(b.id);
 
-            if (!(onewayReverse && !bikeExempt)) {
-                edges.push({ id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, tags });
-            }
-            if (!(oneway && !bikeExempt)) {
-                edges.push({ id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, tags });
-            }
+            if (forward) edges.push({ id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward });
+            if (backward) edges.push({ id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward });
         }
     }
 
