@@ -44,10 +44,11 @@ export const ROUTE_TYPE_OR: Record<RouteType, number> = {
     major_parked: 1.00,         // reference
 };
 
-/** Hazards on the segment, same table. Not applied yet: streetcar or train tracks 3.04 (1.80, 5.11)
- * needs the railways in the map data, downhill grade 2.32 (1.72, 3.13) needs elevation data. */
+/** Hazards on the segment, same table. Not applied yet: downhill grade 2.32 (1.72, 3.13) needs
+ * elevation data. */
 export const HAZARD_OR = {
     construction: 1.93,         // (1.27, 2.94)
+    tracks: 3.04,               // (1.80, 5.11) streetcar or train tracks
 };
 
 /** Teschke's local streets: no demarcated motor traffic lanes, mostly residential. */

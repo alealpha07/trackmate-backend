@@ -53,7 +53,6 @@ export interface GraphEdge {
     /** Bike infrastructure: cycleway, cycle track, bike lane, bike street or bicycle=designated. */
     bikeway: boolean;
     unpaved: boolean;
-    construction: boolean;
 }
 
 export interface GraphNode {

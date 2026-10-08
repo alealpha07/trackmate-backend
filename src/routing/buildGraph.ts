@@ -1,7 +1,8 @@
+import { RAILWAYS } from "./config";
 import { haversineMeters } from "./haversine";
 import { levelOfTrafficStress } from "./lts";
 import {
-    Direction, Tags, bicycleAllowed, bicycleDirection, bikeInfra, hasConstruction, hasParkedCars, isPaved,
+    Direction, Tags, bicycleAllowed, bicycleDirection, bikeInfra, hasConstruction, hasEmbeddedRails, hasParkedCars, isPaved,
 } from "./osmTags";
 import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable";
 import { BBox, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph } from "./types";
@@ -26,16 +27,16 @@ function edgeProfile(tags: Tags, direction: Direction) {
     const infra = bikeInfra(tags, direction);
     const parked = hasParkedCars(tags, direction);
     const paved = isPaved(tags);
-    const construction = hasConstruction(tags);
     const type = routeType(tags, infra, parked, paved);
     return {
         routeType: type,
-        risk: ROUTE_TYPE_OR[type] * (construction ? HAZARD_OR.construction : 1),
+        risk: ROUTE_TYPE_OR[type]
+            * (hasConstruction(tags) ? HAZARD_OR.construction : 1)
+            * (hasEmbeddedRails(tags) ? HAZARD_OR.tracks : 1),
         lts: levelOfTrafficStress(tags, direction, infra, parked),
         bikeway: type === "cycle_track" || type === "bike_path" || type === "local_bike_route"
             || infra === "lane" || tags.bicycle === "designated",
         unpaved: !paved,
-        construction,
     };
 }
 
@@ -43,10 +44,16 @@ function edgeProfile(tags: Tags, direction: Direction) {
 export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGraph {
     const nodeById = new Map<number, OverpassNode>();
     const ways: OverpassWay[] = [];
+    // Nodes of railway tracks: a road reaching one crosses the tracks at grade
+    const railNodes = new Set<number>();
     for (const el of elements) {
         if (el.type === "node") nodeById.set(el.id, el);
-        else if (el.type === "way") ways.push(el);
+        else if (el.tags?.highway) ways.push(el);
+        else if (RAILWAYS.includes(el.tags?.railway ?? "")) el.nodes.forEach((id) => railNodes.add(id));
     }
+    // A crossing is a point: the tracks hazard goes on the edge arriving at it, so each pass over the
+    // tracks counts once whatever the direction (edges along the tracks arrive at one too)
+    const crossing = (to: number) => (railNodes.has(to) ? HAZARD_OR.tracks : 1);
 
     const usedNodeIds = new Set<number>();
     const edges: GraphEdge[] = [];
@@ -70,8 +77,12 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
             usedNodeIds.add(a.id);
             usedNodeIds.add(b.id);
 
-            if (forward) edges.push({ id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward });
-            if (backward) edges.push({ id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward });
+            if (forward) {
+                edges.push({ id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, risk: forward.risk * crossing(b.id) });
+            }
+            if (backward) {
+                edges.push({ id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, risk: backward.risk * crossing(a.id) });
+            }
         }
     }
 

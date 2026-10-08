@@ -131,6 +131,13 @@ export function hasConstruction(tags: Tags): boolean {
     return tags.construction !== undefined && tags.construction !== "no";
 }
 
+/** Tram rails in the roadway, along the way: `embedded_rails[:lanes][:forward|backward]=tram|...`, or
+ * tracks mapped on the road way itself. Crossings are found from shared nodes instead (buildGraph.ts). */
+export function hasEmbeddedRails(tags: Tags): boolean {
+    if (tags.railway === "tram") return true;
+    return Object.entries(tags).some(([key, value]) => key.startsWith("embedded_rails") && value !== "no" && /[^|]/.test(value));
+}
+
 /** Speed limit in km/h from a `maxspeed`-style value: a number, "30 mph", or an implicit limit
  * such as "IT:urban" or "DE:zone30". Only the LTS band (up to 25, 30, 35, 40+ mph) matters, so
  * the implicit limits are approximate: urban 50, rural 90 (CdS art. 142, other roads outside towns). */

@@ -9,7 +9,6 @@ const TESTS: Record<FilterName, (edge: GraphEdge) => boolean> = {
     cyclewaysOnly: (edge) => edge.bikeway,
     avoidUnpaved: (edge) => !edge.unpaved,
     avoidLts4: (edge) => edge.lts < 4,
-    avoidConstruction: (edge) => !edge.construction,
 };
 
 /** Whether an edge may be used with these filters on, null when none is on. */

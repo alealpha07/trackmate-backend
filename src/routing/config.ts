@@ -8,6 +8,12 @@ export const HIGHWAY_WHITELIST = [
     "primary",
     "secondary",
     "tertiary",
+    // Slip roads and ramps at junctions: without them big junctions have gaps
+    "motorway_link",
+    "trunk_link",
+    "primary_link",
+    "secondary_link",
+    "tertiary_link",
     "unclassified",
     "residential",
     "living_street",
@@ -20,6 +26,9 @@ export const HIGHWAY_WHITELIST = [
     "steps",
     "bridleway",
 ];
+
+/** railway=* values fetched with the roads: a road node shared with one of them is a crossing at grade. */
+export const RAILWAYS = ["tram", "rail", "light_rail", "narrow_gauge"];
 
 // Comma-separated list, tried in order when one fails. Default: the main public instance.
 export const OVERPASS_ENDPOINTS = (process.env.OVERPASS_ENDPOINT || "https://overpass-api.de/api/interpreter")
@@ -65,4 +74,4 @@ export const VEHICLES = ["bicycle"];
 /** safest: least injury risk (Teschke 2012), shortest: least distance. See edgeWeight.ts. */
 export const POLICIES = ["safest", "shortest"];
 /** Hard filters the user can turn on: matching edges are left out of the search (filters.ts). */
-export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4", "avoidConstruction"] as const;
+export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4"] as const;
