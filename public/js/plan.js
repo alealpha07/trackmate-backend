@@ -369,6 +369,12 @@ async function plan() {
     }
 }
 
+// Only sent when its filter is on
+function showSoftStat(id, meters) {
+    document.getElementById(`${id}-item`).hidden = meters === undefined;
+    if (meters !== undefined) document.getElementById(id).textContent = formatDistance(meters);
+}
+
 function showRoute(route) {
     currentRoute = route;
     const coordinates = route.track.map((p) => [p.lng, p.lat]);
@@ -379,8 +385,8 @@ function showRoute(route) {
     map.fitBounds(bounds, { padding: fitPadding(), maxZoom: 16 });
     document.getElementById("distance").textContent = formatDistance(route.distance);
     document.getElementById("duration").textContent = formatDuration(route.duration);
-    document.getElementById("off-bikeways-item").hidden = route.offBikeways === undefined;
-    if (route.offBikeways !== undefined) document.getElementById("off-bikeways").textContent = formatDistance(route.offBikeways);
+    showSoftStat("off-bikeways", route.offBikeways);
+    showSoftStat("high-stress", route.highStress);
 
     legsList.replaceChildren(...(route.legs.length > 1 ? route.legs : []).map((leg, i) => {
         const li = document.createElement("li");

@@ -85,6 +85,8 @@ export interface RouteStats {
     risk: number;
     /** Meters without bike infrastructure, only with "Cycleways only" on. */
     offBikeways?: number;
+    /** Meters at LTS 4, only with "Avoid high-stress roads" on. */
+    highStress?: number;
 }
 
 /** One part of a route, between two consecutive points (start, stops, destination). */

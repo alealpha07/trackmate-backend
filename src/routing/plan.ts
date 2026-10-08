@@ -4,7 +4,7 @@ import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
 import { markSnappable } from "./components";
 import { loadDemTiles, loadElevation } from "./elevation";
 import { buildAdjacency, dijkstra } from "./dijkstra";
-import { Policy, edgeCost, preferBikeways } from "./edgeWeight";
+import { Policy, edgeCost, edgePenalty } from "./edgeWeight";
 import { RouteFilters, edgeFilter } from "./filters";
 import { nearestNode } from "./nearestNode";
 import { loadTiles } from "./tileCache";
@@ -41,10 +41,19 @@ async function cachedGraph(key: string, build: () => Promise<CachedGraph>): Prom
     return entry;
 }
 
-function stats(distance: number, risk: number, offBikeways: number | undefined): RouteStats {
-    const result: RouteStats = { distance, duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6), risk };
-    if (offBikeways !== undefined) result.offBikeways = offBikeways;
-    return result;
+type SoftStats = Pick<RouteStats, "offBikeways" | "highStress">;
+
+function stats(distance: number, risk: number, soft: SoftStats): RouteStats {
+    return { distance, duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6), risk, ...soft };
+}
+
+/** Length on the roads each soft filter that is on avoids. */
+function softStats(edges: GraphEdge[], filters: RouteFilters): SoftStats {
+    const length = (test: (edge: GraphEdge) => boolean) => edges.reduce((sum, e) => sum + (test(e) ? e.distance : 0), 0);
+    const soft: SoftStats = {};
+    if (filters.cyclewaysOnly) soft.offBikeways = length((e) => !e.bikeway);
+    if (filters.avoidLts4) soft.highStress = length((e) => e.lts === 4);
+    return soft;
 }
 
 function latLng(graph: RoutingGraph, id: string): LatLng {
@@ -79,12 +88,13 @@ export async function planRoute(
 ): Promise<PlannedRoute | { unreachableLeg: number }> {
     const boxes = points.slice(1).map((end, i) => planningBBox(points[i], end));
     const [legTiles] = await Promise.all([loadTiles(boxes, signal, onProgress), ...boxes.map((box) => loadDemTiles(box, signal))]);
-    const preferred = options.filters.cyclewaysOnly === true;
-    const cost = preferred ? preferBikeways(edgeCost(options.policy)) : edgeCost(options.policy);
+    const cost = edgeCost(options.policy);
+    const penalty = edgePenalty(options.filters, cost);
     const allowed = edgeFilter(options.filters);
 
     const track: TrackPoint[] = [];
     const legs: RouteLeg[] = [];
+    const routeEdges: GraphEdge[] = [];
     let joint: string | null = null;
     for (let i = 0; i < boxes.length; i++) {
         // Building a leg blocks the event loop: let other requests (and a client abort) in between legs
@@ -108,7 +118,7 @@ export async function planRoute(
         const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng, usable);
         if (!startId || !endId) return { unreachableLeg: i };
 
-        const result = dijkstra(adjacency, startId, endId, cost, allowed);
+        const result = dijkstra(adjacency, startId, endId, cost, allowed, penalty);
         if (!result) return { unreachableLeg: i };
 
         // The joint node is already the last point of the track
@@ -116,17 +126,15 @@ export async function planRoute(
         for (const id of nodeIds) {
             track.push({ lat: graph.nodes[id].lat, lng: graph.nodes[id].lon, timestamp: 0, speed: 0 });
         }
-        const offBikeways = preferred
-            ? result.edges.reduce((sum, e) => sum + (e.bikeway ? 0 : e.distance), 0)
-            : undefined;
+        routeEdges.push(...result.edges);
         legs.push({
-            ...stats(result.totalDistanceMeters, result.totalRisk, offBikeways),
+            ...stats(result.totalDistanceMeters, result.totalRisk, softStats(result.edges, options.filters)),
             from: latLng(graph, startId),
             to: latLng(graph, endId),
         });
         joint = endId;
     }
 
-    const total = (field: "distance" | "risk" | "offBikeways") => legs.reduce((sum, l) => sum + (l[field] ?? 0), 0);
-    return { track, ...stats(total("distance"), total("risk"), preferred ? total("offBikeways") : undefined), legs };
+    const total = (field: "distance" | "risk") => legs.reduce((sum, l) => sum + l[field], 0);
+    return { track, ...stats(total("distance"), total("risk"), softStats(routeEdges, options.filters)), legs };
 }
