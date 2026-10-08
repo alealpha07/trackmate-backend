@@ -1,4 +1,6 @@
+import { driveSide, featuresContaining } from "@rapideditor/country-coder";
 import { DEFAULT_LANES, DEFAULT_MAXSPEED_KMH } from "./config";
+import { BBox } from "./types";
 
 export type Tags = Record<string, string>;
 
@@ -18,9 +20,25 @@ export function bicycleAllowed(tags: Tags): boolean {
     return BIKE_ALLOWED.includes(tags.bicycle ?? "");
 }
 
-// right-hand traffic: riding backward is on the left
-function side(direction: Direction): "right" | "left" {
-    return direction === "forward" ? "right" : "left";
+export type DrivingSide = "right" | "left";
+
+// null when the box has both driving sides
+export function drivingSideIn(bbox: BBox): DrivingSide | null {
+    const sides = new Set(featuresContaining([bbox.west, bbox.south, bbox.east, bbox.north])
+        .map((feature) => feature.properties.driveSide)
+        .filter((side) => side !== undefined));
+    return sides.size === 1 ? ([...sides][0] as DrivingSide) : null;
+}
+
+// driving_side on the way wins over the country
+export function drivingSide(tags: Tags, graphSide: DrivingSide | null, lat: number, lon: number): DrivingSide {
+    if (tags.driving_side === "left" || tags.driving_side === "right") return tags.driving_side;
+    return graphSide ?? (driveSide([lon, lat]) === "left" ? "left" : "right");
+}
+
+function side(direction: Direction, driving: DrivingSide): DrivingSide {
+    const opposite = driving === "right" ? "left" : "right";
+    return direction === "forward" ? driving : opposite;
 }
 
 // null on two-way roads, roundabouts are one-way
@@ -64,8 +82,8 @@ function infraOf(value: string | undefined): BikeInfra {
     }
 }
 
-export function bikeInfra(tags: Tags, direction: Direction): BikeInfra {
-    const own = side(direction);
+export function bikeInfra(tags: Tags, direction: Direction, driving: DrivingSide): BikeInfra {
+    const own = side(direction, driving);
     const other = own === "right" ? "left" : "right";
     const cars = carDirection(tags);
     const plain = tags.cycleway;
@@ -93,8 +111,8 @@ export function bikeInfra(tags: Tags, direction: Direction): BikeInfra {
 const NO_PARKING = ["no", "none", "no_parking", "no_stopping", "fire_lane"];
 
 // untagged parking counts as parked, the riskiest case
-export function hasParkedCars(tags: Tags, direction: Direction): boolean {
-    const own = side(direction);
+export function hasParkedCars(tags: Tags, direction: Direction, driving: DrivingSide): boolean {
+    const own = side(direction, driving);
     for (const key of [`parking:${own}`, "parking:both", `parking:lane:${own}`, "parking:lane:both"]) {
         const value = tags[key];
         if (value !== undefined) return !NO_PARKING.includes(value);
