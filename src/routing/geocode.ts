@@ -51,7 +51,6 @@ async function cached<T extends GeocodeResult>(key: string, load: () => Promise<
     if (entry && entry.expires > Date.now()) return entry.results as T[];
 
     const results = await load();
-    // drop the oldest entry when full
     if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value!);
     cache.set(key, { expires: Date.now() + CACHE_TTL_MS, results });
     return results;

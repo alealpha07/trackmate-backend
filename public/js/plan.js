@@ -2,7 +2,6 @@ import { api, apiStream, applyTranslations, t } from "./common.js";
 
 applyTranslations();
 
-// Logged-in users only
 try {
     await api("GET", "/auth/user");
 } catch (err) {
@@ -23,6 +22,8 @@ const EARTH_RADIUS_METERS = 6_371_008.8;
 const ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> '
     + '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
     + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
+const DEM_ATTRIBUTION = "Routes produced using Copernicus WorldDEM-30 &copy; DLR e.V. 2010-2014 and &copy; Airbus Defence and Space GmbH 2014-2018 "
+    + "provided under COPERNICUS by the European Union and ESA; all rights reserved";
 const MAP_STYLES = [
     { id: "outdoors", label: "plan.styleOutdoors" },
     { id: "osm_bright", label: "plan.styleStreets" },
@@ -60,10 +61,18 @@ const map = new maplibregl.Map({
         version: 8,
         sources: {
             basemap: { type: "raster", tiles: tileUrls(savedMapStyle()), tileSize: 256, maxzoom: 20, attribution: ATTRIBUTION },
-            route: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+            // required by the copernicus licence
+            route: { type: "geojson", data: { type: "FeatureCollection", features: [] }, attribution: DEM_ATTRIBUTION },
+            connectors: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
         },
         layers: [
             { id: "basemap", type: "raster", source: "basemap" },
+            {
+                // line from each point to the road it snapped to
+                id: "connectors", type: "line", source: "connectors",
+                layout: { "line-cap": "round" },
+                paint: { "line-color": cssVar("--map-accent"), "line-width": 3, "line-dasharray": [0.5, 2] },
+            },
             {
                 id: "route", type: "line", source: "route",
                 layout: { "line-cap": "round", "line-join": "round" },
@@ -271,6 +280,7 @@ function clearRoute() {
     currentRoute = null;
     result.hidden = true;
     map.getSource("route")?.setData({ type: "FeatureCollection", features: [] });
+    map.getSource("connectors")?.setData({ type: "FeatureCollection", features: [] });
 }
 
 function showStatus(text, isError = false) {
@@ -326,7 +336,6 @@ async function plan() {
             onMessage: (message) => {
                 if (sequence !== planSequence) return;
                 if (message.route) route = message.route;
-                // show the map data download progress
                 const progress = message.progress;
                 if (progress?.total > 0) {
                     showStatus(progress.done < progress.total
@@ -351,12 +360,15 @@ function showRoute(route) {
     currentRoute = route;
     const coordinates = route.track.map((p) => [p.lng, p.lat]);
     map.getSource("route").setData({ type: "Feature", geometry: { type: "LineString", coordinates }, properties: {} });
-    const bounds = coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+    map.getSource("connectors").setData({ type: "FeatureCollection", features: connectorLines(route) });
+    const bounds = [...coordinates, ...rows.map((row) => [row.point.lng, row.point.lat])]
+        .reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
     map.fitBounds(bounds, { padding: fitPadding(), maxZoom: 16 });
     document.getElementById("distance").textContent = formatDistance(route.distance);
     document.getElementById("duration").textContent = formatDuration(route.duration);
+    document.getElementById("off-bikeways-item").hidden = route.offBikeways === undefined;
+    if (route.offBikeways !== undefined) document.getElementById("off-bikeways").textContent = formatDistance(route.offBikeways);
 
-    // With stops, also show each leg
     legsList.replaceChildren(...(route.legs.length > 1 ? route.legs : []).map((leg, i) => {
         const li = document.createElement("li");
         const name = document.createElement("span");
@@ -371,6 +383,20 @@ function showRoute(route) {
     legsList.hidden = route.legs.length < 2;
     result.hidden = false;
     showStatus("");
+}
+
+function connectorLines(route) {
+    const line = (point, end) => ({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: [[point.lng, point.lat], [end.lng, end.lat]] },
+        properties: {},
+    });
+    // skip tiny gaps, round caps would draw a dot
+    const visible = ([a, b]) => new maplibregl.LngLat(a.lng, a.lat).distanceTo(new maplibregl.LngLat(b.lng, b.lat)) > 10;
+    return route.legs
+        .flatMap((leg, i) => [[rows[i].point, leg.from], [rows[i + 1].point, leg.to]])
+        .filter(visible)
+        .map(([point, end]) => line(point, end));
 }
 
 function fitPadding() {

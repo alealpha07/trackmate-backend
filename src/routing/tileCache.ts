@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import zlib from "zlib";
-import { OSM_CACHE_DIR, OSM_CACHE_TTL_DAYS, OVERPASS_MAX_PARALLEL, TILE_SIZE_DEG } from "./config";
+import { OSM_CACHE_DIR, OVERPASS_MAX_PARALLEL, TILE_SIZE_DEG } from "./config";
+import { OSM_CACHE, isFresh as isFreshIn, markUsed, pruneSoon } from "./diskCache";
 import { fetchOverpass } from "./overpass";
 import { BBox, OverpassElement, OverpassNode, OverpassWay } from "./types";
 
@@ -18,8 +19,6 @@ interface TileJob {
     resolve: (elements: OverpassElement[]) => void;
     reject: (error: Error) => void;
 }
-
-const TTL_MS = OSM_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 // one queue for the server, overpass limits slots per IP
 const jobs = new Map<string, TileJob>();
@@ -55,12 +54,11 @@ export function tilesFor(bbox: BBox): Tile[] {
 }
 
 function readTileFile(file: string): OverpassElement[] {
+    markUsed(file);
     return JSON.parse(zlib.gunzipSync(fs.readFileSync(file)).toString("utf-8"));
 }
 
-function isFresh(file: string): boolean {
-    return fs.existsSync(file) && Date.now() - fs.statSync(file).mtimeMs < TTL_MS;
-}
+const isFresh = (file: string) => isFreshIn(OSM_CACHE, file);
 
 async function fetchTile(job: TileJob): Promise<OverpassElement[]> {
     const file = tilePath(job.tile);
@@ -72,9 +70,10 @@ async function fetchTile(job: TileJob): Promise<OverpassElement[]> {
         const tmp = `${file}.${process.pid}.tmp`;
         fs.writeFileSync(tmp, zlib.gzipSync(JSON.stringify(elements)));
         fs.renameSync(tmp, file);
+        pruneSoon(OSM_CACHE);
         return elements;
     } catch (error) {
-        // a stale tile is better than no route
+        // A stale tile is better than no route
         if (fs.existsSync(file)) {
             console.warn(`Tile ${job.key}: ${(error as Error).message}. Using the stale cached copy`);
             return readTileFile(file);
@@ -175,7 +174,6 @@ export async function loadTiles(
     onProgress?: (done: number, total: number) => void,
 ): Promise<LoadedTiles[]> {
     const perBox = bboxes.map(tilesFor);
-    // download each tile once
     const unique = new Map(perBox.flat().map((tile) => [tileKey(tile), tile]));
     const missing = [...unique.values()].filter((tile) => !isFresh(tilePath(tile)));
 
@@ -198,6 +196,9 @@ export async function loadTiles(
     } finally {
         signal.removeEventListener("abort", onAbort);
     }
+
+    // mark them in use for the cache pruning
+    unique.forEach((tile) => markUsed(tilePath(tile)));
 
     // read per leg to keep memory low
     return perBox.map((tiles) => ({

@@ -18,11 +18,11 @@ export type RouteType =
 
 // injury risk relative to a major street with parked cars (1.00)
 export const ROUTE_TYPE_OR: Record<RouteType, number> = {
-    cycle_track: 0.11,
+    cycle_track: 0.11,          // bike track separated from the road
     local_bike_route: 0.49,     // local street signed as a bike route
     local: 0.51,
     major_lane: 0.54,           // no parked cars, bike lane
-    bike_path: 0.59,
+    bike_path: 0.59,            // off-road, bikes only
     major_shared: 0.60,         // no parked cars, shared lane
     major: 0.63,                // no parked cars
     major_parked_lane: 0.69,
@@ -30,12 +30,14 @@ export const ROUTE_TYPE_OR: Record<RouteType, number> = {
     multiuse_unpaved: 0.73,
     multiuse_paved: 0.79,
     sidewalk: 0.87,             // or other pedestrian path
-    major_parked: 1.00,         // reference
+    major_parked: 1.00,
 };
 
+// hazards multiply the road type
 export const HAZARD_OR = {
     construction: 1.93,
     tracks: 3.04,               // tram or train tracks
+    downhill: 2.32,
 };
 
 // streets without marked lanes

@@ -96,7 +96,7 @@ export async function fetchOverpass(bbox: BBox, stillWanted: () => boolean = () 
                 }
             }
             if (delayMs === null) {
-                // network errors are temporary too
+                // Network errors and timeouts are temporary too
                 const retryable = error.retryable ?? true;
                 if (!retryable || attempt >= RETRY_DELAYS_MS.length) throw new Error(message);
                 delayMs = RETRY_DELAYS_MS[attempt];

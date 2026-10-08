@@ -18,7 +18,7 @@ export function bicycleAllowed(tags: Tags): boolean {
     return BIKE_ALLOWED.includes(tags.bicycle ?? "");
 }
 
-// right-hand traffic: forward on the right side of the way
+// right-hand traffic: riding backward is on the left
 function side(direction: Direction): "right" | "left" {
     return direction === "forward" ? "right" : "left";
 }
@@ -64,7 +64,6 @@ function infraOf(value: string | undefined): BikeInfra {
     }
 }
 
-// best bike infrastructure in this direction
 export function bikeInfra(tags: Tags, direction: Direction): BikeInfra {
     const own = side(direction);
     const other = own === "right" ? "left" : "right";
@@ -123,7 +122,6 @@ export function hasConstruction(tags: Tags): boolean {
     return tags.construction !== undefined && tags.construction !== "no";
 }
 
-// tram rails along the roadway
 export function hasEmbeddedRails(tags: Tags): boolean {
     if (tags.railway === "tram") return true;
     return Object.entries(tags).some(([key, value]) => key.startsWith("embedded_rails") && value !== "no" && /[^|]/.test(value));
@@ -163,7 +161,6 @@ export function totalLanes(tags: Tags): number {
     return positiveInt(tags.lanes) ?? (carDirection(tags) ? 1 : DEFAULT_LANES);
 }
 
-// through lanes next to the cyclist
 export function lanesPerDirection(tags: Tags, direction: Direction): number {
     const total = totalLanes(tags);
     if (carDirection(tags)) return total;

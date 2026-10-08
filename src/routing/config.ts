@@ -41,7 +41,22 @@ export const OVERPASS_TIMEOUT_SECONDS = 120;
 export const OVERPASS_MAX_PARALLEL = 2;
 
 export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "osm");
+// tile cache: refresh after TTL, prune least recently used past MAX_MB
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
+export const OSM_CACHE_MAX_MB = Number(process.env.OSM_CACHE_MAX_MB) || 1024;
+// Copernicus GLO-30, 30 m grid, no key needed
+export const DEM_URL = process.env.DEM_URL || "https://copernicus-dem-30m.s3.amazonaws.com";
+export const DEM_CACHE_DIR = process.env.DEM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "dem");
+// Italy is about 45 tiles, 1.8 GB
+export const DEM_CACHE_TTL_DAYS = Number(process.env.DEM_CACHE_TTL_DAYS) || 365;
+export const DEM_CACHE_MAX_MB = Number(process.env.DEM_CACHE_MAX_MB) || 2048;
+// a 30 m grid is too coarse for short edges
+export const GRADE_WINDOW_METERS = 200;
+// ground filter radius in pixels, removes roofs and trees from the elevation
+export const DEM_GROUND_RADIUS = 5;
+// gentler descents are just noise in flat cities
+export const DOWNHILL_GRADE = -0.03;
+
 // degrees, about 5.5 km
 export const TILE_SIZE_DEG = 0.05;
 // bounded by total edges, about 475 MB
@@ -51,7 +66,6 @@ export const GRAPH_CACHE_MAX_EDGES = 1_000_000;
 export const SMALL_COMPONENT_SIZE = 1000;
 
 export const MAX_PLAN_DISTANCE_METERS = 50_000;
-// leg box buffer
 export const BBOX_BUFFER_METERS = 2_000;
 
 // only for the displayed duration (OSRM bicycle default)
@@ -62,6 +76,5 @@ export const DEFAULT_MAXSPEED_KMH = 50;
 export const DEFAULT_LANES = 2;
 
 export const VEHICLES = ["bicycle"];
-// safest: least injury risk, shortest: least distance
 export const POLICIES = ["safest", "shortest"];
 export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4"] as const;

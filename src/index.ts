@@ -82,6 +82,9 @@ app.use("/", share);
 
 // initializing cron job for quests
 initCronJob();
+// imported after dotenv
+import { scheduleCachePruning } from "./routing/diskCache";
+scheduleCachePruning();
 
 app.listen(PORT, () => {
     console.log(`Server has started on http://localhost:${PORT}`);

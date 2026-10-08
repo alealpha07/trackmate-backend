@@ -10,14 +10,14 @@ function speedMph(tags: Tags, direction: Direction): number {
 
 // traffic stress for a direction, the worst criterion wins
 export function levelOfTrafficStress(tags: Tags, direction: Direction, infra: BikeInfra, parked: boolean): Lts {
-    // separated from motor traffic
+    // Separated from motor traffic
     if (PATH_HIGHWAYS.includes(tags.highway) || infra === "track") return 1;
 
     const mph = speedMph(tags, direction);
     if (infra === "lane") {
         const lanes = lanesPerDirection(tags, direction);
         if (parked) {
-            // bike lane next to parked cars
+            // Bike lane next to parked cars
             const width: Lts = lanes >= 2 ? 3 : 1;
             const speed: Lts = mph <= 25 ? 1 : mph <= 30 ? 2 : mph <= 35 ? 3 : 4;
             return Math.max(width, speed) as Lts;

@@ -38,16 +38,16 @@ export interface OverpassResponse {
 
 export interface GraphEdge {
     id: string;
-    // OSM node id
+    // OSM node ids
     from: number;
-    // OSM node id
     to: number;
     // meters
     distance: number;
     routeType: RouteType;
     // road type times hazards
     risk: number;
-    // traffic stress (lts.ts)
+    // negative downhill
+    grade: number;
     lts: Lts;
     bikeway: boolean;
     unpaved: boolean;
@@ -73,16 +73,23 @@ export interface TrackPoint {
     speed: number;
 }
 
-export interface RouteLeg {
+export interface RouteStats {
     // meters
     distance: number;
     // seconds
     duration: number;
     // sum of distance times risk (the safest cost)
     risk: number;
+    // meters, only with cycleways only on
+    offBikeways?: number;
 }
 
-export interface PlannedRoute extends RouteLeg {
+export interface RouteLeg extends RouteStats {
+    from: LatLng;
+    to: LatLng;
+}
+
+export interface PlannedRoute extends RouteStats {
     track: TrackPoint[];
     // not saved in the track file
     legs: RouteLeg[];

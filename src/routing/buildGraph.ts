@@ -1,4 +1,5 @@
-import { RAILWAYS } from "./config";
+import { DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "./config";
+import { Elevation } from "./elevation";
 import { haversineMeters } from "./haversine";
 import { levelOfTrafficStress } from "./lts";
 import {
@@ -36,10 +37,41 @@ function edgeProfile(tags: Tags, direction: Direction) {
     };
 }
 
-export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGraph {
+// grade over GRADE_WINDOW_METERS, bridges and tunnels go straight between their ends
+function wayGrades(points: OverpassNode[], tags: Tags, elevation: Elevation): number[] {
+    const along = [0];
+    for (let i = 1; i < points.length; i++) {
+        along.push(along[i - 1] + haversineMeters(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon));
+    }
+    const length = along[along.length - 1];
+    if (length <= 0) return points.slice(1).map(() => 0);
+
+    let heights = points.map((p) => elevation(p.lat, p.lon));
+    const raised = (tags.bridge && tags.bridge !== "no") || (tags.tunnel && tags.tunnel !== "no");
+    if (raised) {
+        const [first, last] = [heights[0], heights[heights.length - 1]];
+        heights = along.map((d) => first + ((last - first) * d) / length);
+    }
+    let segment = 0;
+    const heightAt = (d: number) => {
+        if (along[segment] > d) segment = 0;
+        while (segment < along.length - 2 && along[segment + 1] < d) segment++;
+        const span = along[segment + 1] - along[segment];
+        const t = span > 0 ? (d - along[segment]) / span : 0;
+        return heights[segment] + (heights[segment + 1] - heights[segment]) * Math.min(1, Math.max(0, t));
+    };
+
+    const window = Math.min(GRADE_WINDOW_METERS, length);
+    return along.slice(1).map((end, i) => {
+        const middle = (along[i] + end) / 2;
+        const start = Math.min(Math.max(0, middle - window / 2), length - window);
+        return (heightAt(start + window) - heightAt(start)) / window;
+    });
+}
+
+export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: Elevation): RoutingGraph {
     const nodeById = new Map<number, OverpassNode>();
     const ways: OverpassWay[] = [];
-    // railway nodes: a road reaching one crosses at grade
     const railNodes = new Set<number>();
     for (const el of elements) {
         if (el.type === "node") nodeById.set(el.id, el);
@@ -60,6 +92,12 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
         const forward = only === "backward" ? null : edgeProfile(tags, "forward");
         const backward = only === "forward" ? null : edgeProfile(tags, "backward");
 
+        const points = way.nodes.map((id) => nodeById.get(id));
+        const grades = elevation && points.every(Boolean)
+            ? wayGrades(points as OverpassNode[], tags, elevation)
+            : way.nodes.map(() => 0);
+        const downhill = (grade: number) => (grade < DOWNHILL_GRADE ? HAZARD_OR.downhill : 1);
+
         for (let i = 0; i < way.nodes.length - 1; i++) {
             const a = nodeById.get(way.nodes[i]);
             const b = nodeById.get(way.nodes[i + 1]);
@@ -71,11 +109,18 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
             usedNodeIds.add(a.id);
             usedNodeIds.add(b.id);
 
+            const grade = grades[i];
             if (forward) {
-                edges.push({ id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, risk: forward.risk * crossing(b.id) });
+                edges.push({
+                    id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, grade,
+                    risk: forward.risk * crossing(b.id) * downhill(grade),
+                });
             }
             if (backward) {
-                edges.push({ id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, risk: backward.risk * crossing(a.id) });
+                edges.push({
+                    id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, grade: -grade,
+                    risk: backward.risk * crossing(a.id) * downhill(-grade),
+                });
             }
         }
     }
