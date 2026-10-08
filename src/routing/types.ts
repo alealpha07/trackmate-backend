@@ -82,6 +82,8 @@ export interface RouteStats {
     risk: number;
     // meters, only with cycleways only on
     offBikeways?: number;
+    // meters at LTS 4
+    highStress?: number;
 }
 
 export interface RouteLeg extends RouteStats {

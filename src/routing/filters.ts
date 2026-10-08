@@ -7,7 +7,6 @@ export type RouteFilters = Partial<Record<FilterName, boolean>>;
 // all soft, so a trip always has a route
 const TESTS: Partial<Record<FilterName, (edge: GraphEdge) => boolean>> = {
     avoidUnpaved: (edge) => !edge.unpaved,
-    avoidLts4: (edge) => edge.lts < 4,
 };
 
 export function edgeFilter(filters: RouteFilters): ((edge: GraphEdge) => boolean) | null {

@@ -1,3 +1,4 @@
+import { RouteFilters } from "./filters";
 import { GraphEdge } from "./types";
 
 export type Policy = "safest" | "shortest";
@@ -9,9 +10,12 @@ export function edgeCost(policy: Policy): (edge: GraphEdge) => number {
 }
 
 // more than any whole route costs
-const CONNECTOR_WEIGHT = 1e9;
+const HIGH_STRESS_WEIGHT = 1e8;
 
-// cycleways only: other roads only where nothing else connects
-export function preferBikeways(cost: (edge: GraphEdge) => number): (edge: GraphEdge) => number {
-    return (edge) => (edge.bikeway ? cost(edge) : cost(edge) * (1 + CONNECTOR_WEIGHT));
+// soft filters, most important first: high stress, unpaved, off cycleways
+export function edgePenalty(filters: RouteFilters, cost: (edge: GraphEdge) => number): ((edge: GraphEdge) => number) | null {
+    const avoidLts4 = filters.avoidLts4 === true;
+    const cyclewaysOnly = filters.cyclewaysOnly === true;
+    if (!avoidLts4 && !cyclewaysOnly) return null;
+    return (edge) => cost(edge) * ((avoidLts4 && edge.lts === 4 ? HIGH_STRESS_WEIGHT : 0) + (cyclewaysOnly && !edge.bikeway ? 1 : 0));
 }
