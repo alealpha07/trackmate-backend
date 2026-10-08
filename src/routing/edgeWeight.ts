@@ -1,7 +1,11 @@
 import { GraphEdge } from "./types";
 
-// Phase 1: shortest by distance (parity with trackmate-router).
-// Phase 3 adds the Safest policy (Teschke 2012 risk-weighted distance, see context/PlanNotes.md).
-export function edgeWeight(edge: GraphEdge): number {
-    return edge.distance;
+export type Policy = "safest" | "shortest";
+
+/** Cost of an edge for Dijkstra:
+ * Safest:   C(e) = len(e) · OR_type(e) · OR_hazard(e), risk-weighted distance (Teschke 2012)
+ * Shortest: C(e) = len(e) */
+export function edgeCost(policy: Policy): (edge: GraphEdge) => number {
+    if (policy === "safest") return (edge) => edge.distance * edge.risk;
+    return (edge) => edge.distance;
 }

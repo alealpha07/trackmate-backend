@@ -4,8 +4,7 @@ import { BBox, LatLng } from "./types";
 
 const METERS_PER_DEGREE_LAT = (Math.PI * EARTH_RADIUS_METERS) / 180;
 
-/** Rectangle enclosing start and end, expanded on every side by the buffer Δ
- * (context/Notes.md, "Dynamic BBOX"). */
+/** Rectangle enclosing start and end, expanded on every side by the buffer Δ. */
 export function planningBBox(start: LatLng, end: LatLng, bufferMeters = BBOX_BUFFER_METERS): BBox {
     const deltaLat = bufferMeters / METERS_PER_DEGREE_LAT;
     // Use the latitude farthest from the equator so the longitude buffer is never too small.

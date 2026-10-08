@@ -66,17 +66,16 @@
 
                 <fieldset class="segmented">
                     <legend data-i18n="plan.policy"></legend>
-                    <!-- Safest and the filters are enabled in Phase 3, with the Teschke weights -->
-                    <label data-i18n-title="plan.comingSoon"><input type="radio" name="policy" value="safest" disabled><span data-i18n="plan.safest"></span></label>
-                    <label><input type="radio" name="policy" value="shortest" checked><span data-i18n="plan.shortest"></span></label>
+                    <label data-i18n-title="plan.safestHint"><input type="radio" name="policy" value="safest" checked><span data-i18n="plan.safest"></span></label>
+                    <label data-i18n-title="plan.shortestHint"><input type="radio" name="policy" value="shortest"><span data-i18n="plan.shortest"></span></label>
                 </fieldset>
 
-                <fieldset class="filters" data-i18n-title="plan.comingSoon">
-                    <legend><span data-i18n="plan.filters"></span> <span class="badge" data-i18n="plan.comingSoon"></span></legend>
-                    <label class="toggle"><input type="checkbox" name="cyclewaysOnly" disabled><span data-i18n="plan.cyclewaysOnly"></span></label>
-                    <label class="toggle"><input type="checkbox" name="avoidUnpaved" disabled><span data-i18n="plan.avoidUnpaved"></span></label>
-                    <label class="toggle"><input type="checkbox" name="avoidLts4" disabled><span data-i18n="plan.avoidLts4"></span></label>
-                    <label class="toggle"><input type="checkbox" name="avoidConstruction" disabled><span data-i18n="plan.avoidConstruction"></span></label>
+                <fieldset class="filters">
+                    <legend data-i18n="plan.filters"></legend>
+                    <label class="toggle" data-i18n-title="plan.cyclewaysOnlyHint"><input type="checkbox" name="cyclewaysOnly"><span data-i18n="plan.cyclewaysOnly"></span></label>
+                    <label class="toggle" data-i18n-title="plan.avoidUnpavedHint"><input type="checkbox" name="avoidUnpaved"><span data-i18n="plan.avoidUnpaved"></span></label>
+                    <label class="toggle" data-i18n-title="plan.avoidLts4Hint"><input type="checkbox" name="avoidLts4"><span data-i18n="plan.avoidLts4"></span></label>
+                    <label class="toggle" data-i18n-title="plan.avoidConstructionHint"><input type="checkbox" name="avoidConstruction"><span data-i18n="plan.avoidConstruction"></span></label>
                 </fieldset>
             </section>
 

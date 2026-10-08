@@ -1,4 +1,3 @@
-import { edgeWeight } from "./edgeWeight";
 import { GraphEdge, RoutingGraph } from "./types";
 import { MinHeap } from "./priorityQueue";
 
@@ -7,6 +6,8 @@ export interface RouteResult {
     edges: GraphEdge[];
     totalCost: number;
     totalDistanceMeters: number;
+    /** Σ distance · risk, the Safest cost whatever the policy (for comparing routes). */
+    totalRisk: number;
 }
 
 export function buildAdjacency(graph: RoutingGraph): Map<string, GraphEdge[]> {
@@ -20,7 +21,14 @@ export function buildAdjacency(graph: RoutingGraph): Map<string, GraphEdge[]> {
     return adjacency;
 }
 
-export function dijkstra(adjacency: Map<string, GraphEdge[]>, startId: string, endId: string): RouteResult | null {
+/** Cheapest path by `cost`, using only the edges `allowed` accepts (all when null). */
+export function dijkstra(
+    adjacency: Map<string, GraphEdge[]>,
+    startId: string,
+    endId: string,
+    cost: (edge: GraphEdge) => number,
+    allowed: ((edge: GraphEdge) => boolean) | null = null,
+): RouteResult | null {
     const dist = new Map<string, number>([[startId, 0]]);
     const prevEdge = new Map<string, GraphEdge>();
     const visited = new Set<string>();
@@ -36,9 +44,9 @@ export function dijkstra(adjacency: Map<string, GraphEdge[]>, startId: string, e
         const currentDist = dist.get(current)!;
         for (const edge of adjacency.get(current) ?? []) {
             const to = String(edge.to);
-            if (visited.has(to)) continue;
+            if (visited.has(to) || (allowed && !allowed(edge))) continue;
 
-            const candidate = currentDist + edgeWeight(edge);
+            const candidate = currentDist + cost(edge);
             if (candidate < (dist.get(to) ?? Infinity)) {
                 dist.set(to, candidate);
                 prevEdge.set(to, edge);
@@ -67,5 +75,6 @@ export function dijkstra(adjacency: Map<string, GraphEdge[]>, startId: string, e
         edges,
         totalCost: dist.get(endId)!,
         totalDistanceMeters: edges.reduce((sum, e) => sum + e.distance, 0),
+        totalRisk: edges.reduce((sum, e) => sum + e.distance * e.risk, 0),
     };
 }

@@ -1,7 +1,10 @@
 import { planningBBox } from "./bbox";
 import { buildGraph } from "./buildGraph";
 import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
+import { markSnappable } from "./components";
 import { buildAdjacency, dijkstra } from "./dijkstra";
+import { Policy, edgeCost } from "./edgeWeight";
+import { RouteFilters, edgeFilter } from "./filters";
 import { nearestNode } from "./nearestNode";
 import { loadTiles } from "./tileCache";
 import { GraphEdge, LatLng, PlannedRoute, RouteLeg, RoutingGraph, TrackPoint } from "./types";
@@ -36,23 +39,44 @@ function cachedGraph(key: string, build: () => CachedGraph): CachedGraph {
     return entry;
 }
 
-function leg(distance: number): RouteLeg {
-    return { distance, duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6) };
+function leg(distance: number, risk: number): RouteLeg {
+    return { distance, duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6), risk };
+}
+
+export interface PlanOptions {
+    policy: Policy;
+    filters: RouteFilters;
+}
+
+/** Nodes with at least one edge the filters allow: points snap to these, so a route never
+ * starts or ends on a road it isn't allowed to use. */
+function usableNodes(graph: RoutingGraph, allowed: (edge: GraphEdge) => boolean): Set<string> {
+    const nodes = new Set<string>();
+    for (const edge of graph.edges) {
+        if (!allowed(edge)) continue;
+        nodes.add(String(edge.from));
+        nodes.add(String(edge.to));
+    }
+    return nodes;
 }
 
 /** Plans a route through `points` in order (start, stops, destination). Each leg gets its own
  * BBOX and graph and the legs are joined end to end, like via points in OSRM: the shortest route
- * through fixed stops is the sequence of shortest legs.
+ * through fixed stops is the sequence of shortest legs. Edges cost by `options.policy`, and edges
+ * failing a filter in `options.filters` are not used.
  * Returns the index of the first leg without a route when two consecutive points aren't connected.
  * Rejects with an AbortError when `signal` aborts, and with a PartialDownloadError when map data
  * is missing. */
 export async function planRoute(
     points: LatLng[],
+    options: PlanOptions,
     signal: AbortSignal,
     onProgress?: (done: number, total: number) => void,
 ): Promise<PlannedRoute | { unreachableLeg: number }> {
     const boxes = points.slice(1).map((end, i) => planningBBox(points[i], end));
     const legTiles = await loadTiles(boxes, signal, onProgress);
+    const cost = edgeCost(options.policy);
+    const allowed = edgeFilter(options.filters);
 
     const track: TrackPoint[] = [];
     const legs: RouteLeg[] = [];
@@ -65,15 +89,19 @@ export async function planRoute(
         const { key, elements } = legTiles[i];
         const { graph, adjacency } = cachedGraph(key, () => {
             const graph = buildGraph(elements(), boxes[i]);
-            return { graph, adjacency: buildAdjacency(graph) };
+            const adjacency = buildAdjacency(graph);
+            markSnappable(graph, adjacency);
+            return { graph, adjacency };
         });
 
+        const usable = allowed && usableNodes(graph, allowed);
         // Continue from the previous leg's last node, so legs join exactly at the stop
-        const startId = joint !== null && graph.nodes[joint] ? joint : nearestNode(graph, points[i].lat, points[i].lng);
-        const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng);
+        const continues = joint !== null && graph.nodes[joint] && (!usable || usable.has(joint));
+        const startId = continues ? joint : nearestNode(graph, points[i].lat, points[i].lng, usable);
+        const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng, usable);
         if (!startId || !endId) return { unreachableLeg: i };
 
-        const result = dijkstra(adjacency, startId, endId);
+        const result = dijkstra(adjacency, startId, endId, cost, allowed);
         if (!result) return { unreachableLeg: i };
 
         // The joint node is already the last point of the track
@@ -81,10 +109,11 @@ export async function planRoute(
         for (const id of nodeIds) {
             track.push({ lat: graph.nodes[id].lat, lng: graph.nodes[id].lon, timestamp: 0, speed: 0 });
         }
-        legs.push(leg(result.totalDistanceMeters));
+        legs.push(leg(result.totalDistanceMeters, result.totalRisk));
         joint = endId;
     }
 
     const distance = legs.reduce((sum, l) => sum + l.distance, 0);
-    return { track, ...leg(distance), legs };
+    const risk = legs.reduce((sum, l) => sum + l.risk, 0);
+    return { track, ...leg(distance, risk), legs };
 }

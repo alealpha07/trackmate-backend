@@ -1,3 +1,6 @@
+import { Lts } from "./lts";
+import { RouteType } from "./riskTable";
+
 export interface LatLng {
     lat: number;
     lng: number;
@@ -33,20 +36,6 @@ export interface OverpassResponse {
     elements: OverpassElement[];
 }
 
-/** OSM tags carried through onto each edge. Phase 1 routing only reads `distance`;
- * the weighted policies (Phase 3) read these. */
-export interface EdgeTags {
-    highway?: string;
-    surface?: string;
-    smoothness?: string;
-    lit?: string;
-    bicycle?: string;
-    cycleway?: string;
-    sac_scale?: string;
-    oneway?: string;
-    name?: string;
-}
-
 export interface GraphEdge {
     id: string;
     /** OSM node id. */
@@ -55,12 +44,23 @@ export interface GraphEdge {
     to: number;
     /** Great-circle length of this edge, in meters. */
     distance: number;
-    tags: EdgeTags;
+    /** Teschke route type for a cyclist riding this way (side of the road, parked cars). */
+    routeType: RouteType;
+    /** Relative injury risk: OR of the route type times OR of the hazards (riskTable.ts). */
+    risk: number;
+    /** Level of Traffic Stress riding this way (lts.ts). */
+    lts: Lts;
+    /** Bike infrastructure: cycleway, cycle track, bike lane, bike street or bicycle=designated. */
+    bikeway: boolean;
+    unpaved: boolean;
+    construction: boolean;
 }
 
 export interface GraphNode {
     lat: number;
     lon: number;
+    /** In a large strongly connected component: points may snap here (components.ts). */
+    snappable?: boolean;
 }
 
 export interface RoutingGraph {
@@ -83,6 +83,9 @@ export interface RouteLeg {
     distance: number;
     /** Seconds, estimated at the display cycling speed. */
     duration: number;
+    /** Risk-weighted distance, Σ distance · risk (the Safest cost), in meters of a major street
+     * with parked cars. risk / distance is the route's average relative injury risk. */
+    risk: number;
 }
 
 export interface PlannedRoute extends RouteLeg {

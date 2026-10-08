@@ -2,7 +2,9 @@ import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
 import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
-import { MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
+import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
+import { Policy } from "../routing/edgeWeight";
+import { RouteFilters } from "../routing/filters";
 import { planRoute } from "../routing/plan";
 import { PartialDownloadError } from "../routing/tileCache";
 import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
@@ -18,6 +20,18 @@ function parseLatLng(value: any): LatLng | null {
     return { lat, lng };
 }
 
+/** `filters` is optional: an object of known filter names to booleans. null when invalid. */
+function parseFilters(value: any): RouteFilters | null {
+    if (value === undefined || value === null) return {};
+    if (typeof value !== "object" || Array.isArray(value)) return null;
+    const filters: RouteFilters = {};
+    for (const [name, on] of Object.entries(value)) {
+        if (!(FILTERS as readonly string[]).includes(name) || typeof on !== "boolean") return null;
+        filters[name as keyof RouteFilters] = on;
+    }
+    return filters;
+}
+
 /** Name of point `index` of `count` in server messages: start, stop N, destination. */
 function pointName(response: Response, index: number, count: number): string {
     if (index === 0) return response.__("route.points.start");
@@ -30,7 +44,8 @@ function legName(response: Response, leg: number, count: number): string {
     return `${pointName(response, leg, count)} → ${pointName(response, leg + 1, count)}`;
 }
 
-// Plan a route from start to end, through the optional stops in `via` (in order).
+// Plan a route from start to end, through the optional stops in `via` (in order), by `policy`
+// (safest or shortest) and with the optional hard `filters` ({cyclewaysOnly: true, ...}).
 // With ?stream=1 the answer is NDJSON: {"progress":{"done","total"}} lines while map data
 // downloads (keeps proxies from timing out), then {"route":…} or {"error","status"}.
 router.post("/plan", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
@@ -60,6 +75,10 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
         }
         if (!POLICIES.includes(sanitizedParams.policy)) {
             return response.status(422).send(response.__("route.errors.policy"));
+        }
+        const filters = parseFilters(request.body.filters);
+        if (!filters) {
+            return response.status(422).send(response.__("route.errors.filters"));
         }
         // The cap is per leg (each leg has its own BBOX), there is no total
         for (let i = 0; i < route.length - 1; i++) {
@@ -96,7 +115,7 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
 
         let planned;
         try {
-            planned = await planRoute(route, controller.signal, onProgress);
+            planned = await planRoute(route, { policy: sanitizedParams.policy as Policy, filters }, controller.signal, onProgress);
         } catch (error) {
             if ((error as Error).name === "AbortError") return;
             console.error(`Route planning failed: ${(error as Error).message}`);
@@ -106,7 +125,10 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
             return fail(502, response.__("route.errors.map-data"));
         }
         if ("unreachableLeg" in planned) {
-            return fail(422, response.__("route.errors.no-route-leg", legName(response, planned.unreachableLeg, route.length)));
+            const leg = legName(response, planned.unreachableLeg, route.length);
+            // With filters on, the usual cause is a gap in the allowed roads
+            const filtered = Object.values(filters).some(Boolean);
+            return fail(422, response.__(filtered ? "route.errors.no-route-filters" : "route.errors.no-route-leg", leg));
         }
 
         if (stream) response.end(JSON.stringify({ route: planned }) + "\n");
