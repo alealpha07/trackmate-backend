@@ -83,6 +83,9 @@ app.use("/", share);
 
 // initializing cron job for quests
 initCronJob();
+// Map and elevation tile caches: time and size limits. Imported here, after dotenv, like the routes
+import { scheduleCachePruning } from "./routing/diskCache";
+scheduleCachePruning();
 
 app.listen(PORT, () => {
     console.log(`Server has started on http://localhost:${PORT}`);

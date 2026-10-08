@@ -18,13 +18,11 @@ out skel qt;
 `.trim();
 }
 
-// 429 = too many requests, 5xx = server overloaded or broken (e.g. an instance answering 500 to
-// every query): all worth another try. Network errors and timeouts are retried too. Each retry
-// moves to the next endpoint (if configured). Other 4xx (a bad query) fail at once.
+// Too many requests or a server error: retried, each time on the next endpoint. Other 4xx (a bad
+// query) fail at once
 const isRetryableStatus = (status: number) => status === 429 || status >= 500;
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
-// On 429 we ask /api/status when this IP gets a free slot and wait exactly that long. Those waits
-// don't use up the retries above, but are capped so a stuck server can't hold a request forever.
+// On 429, wait for the free slot /api/status announces. Those waits don't use up the retries above
 const MAX_SLOT_WAITS = 10;
 const MAX_SLOT_WAIT_SECONDS = 60;
 
@@ -53,9 +51,7 @@ async function query(endpoint: string, body: string): Promise<OverpassElement[]>
     return ((await res.json()) as OverpassResponse).elements;
 }
 
-/** Seconds until this IP gets a free query slot on the endpoint, read from its /api/status page
- * ("2 slots available now." or "Slot available after: 2026-10-07T10:00:05Z, in 12 seconds.").
- * null when the page can't be read. */
+/** From the /api/status page: "2 slots available now." or "Slot available after: …, in 12 seconds." */
 async function secondsUntilSlot(endpoint: string): Promise<number | null> {
     try {
         const res = await fetch(endpoint.replace(/\/interpreter\/?$/, "/status"), {
@@ -73,7 +69,6 @@ async function secondsUntilSlot(endpoint: string): Promise<number | null> {
     }
 }
 
-/** Waits `ms`, giving up early once nobody needs the result anymore. */
 async function wait(ms: number, stillWanted: () => boolean): Promise<void> {
     const end = Date.now() + ms;
     while (Date.now() < end && stillWanted()) {
@@ -81,8 +76,7 @@ async function wait(ms: number, stillWanted: () => boolean): Promise<void> {
     }
 }
 
-/** Road network (ways + their nodes) inside the box. Retries stop as soon as
- * `stillWanted()` returns false (every request waiting for it was cancelled). */
+/** Retries stop once `stillWanted()` is false (every request waiting for it was cancelled). */
 export async function fetchOverpass(bbox: BBox, stillWanted: () => boolean = () => true): Promise<OverpassElement[]> {
     const body = "data=" + encodeURIComponent(buildQuery(bbox));
     let attempt = 0;
@@ -105,7 +99,7 @@ export async function fetchOverpass(bbox: BBox, stillWanted: () => boolean = () 
                 }
             }
             if (delayMs === null) {
-                // fetch() throws TypeError/TimeoutError on network problems: also temporary
+                // Network errors and timeouts are temporary too
                 const retryable = error.retryable ?? true;
                 if (!retryable || attempt >= RETRY_DELAYS_MS.length) throw new Error(message);
                 delayMs = RETRY_DELAYS_MS[attempt];

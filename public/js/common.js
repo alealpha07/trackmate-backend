@@ -48,7 +48,7 @@ const STRINGS = {
         "plan.cyclewaysOnly": "Cycleways only",
         "plan.avoidUnpaved": "Avoid unpaved",
         "plan.avoidLts4": "Avoid high-stress roads",
-        "plan.cyclewaysOnlyHint": "Only cycleways, cycle tracks, bike lanes and bike streets. Start and destination move to the nearest one",
+        "plan.cyclewaysOnlyHint": "Cycleways, cycle tracks, bike lanes and bike streets. Other roads only where none connects, as little as possible",
         "plan.avoidUnpavedHint": "No gravel, dirt or grass. Tracks and paths without a mapped surface count as unpaved",
         "plan.avoidLts4Hint": "No roads at the highest level of traffic stress: fast or multi-lane traffic without a separated bike lane",
         "plan.plan": "Plan route",
@@ -58,6 +58,8 @@ const STRINGS = {
         "plan.planningShort": "Planning…",
         "plan.distance": "Distance",
         "plan.duration": "Estimated time",
+        "plan.offBikeways": "Off cycleways",
+        "plan.offBikewaysHint": "Length on roads without bike infrastructure, where no cycleway connects",
         "plan.save": "Save to my tracks",
         "plan.savePrompt": "Name of the track",
         "plan.saved": "Saved to your tracks!",
@@ -68,7 +70,7 @@ const STRINGS = {
     },
 };
 
-/** UI string for `key`; {0}, {1}… are replaced by `args`. */
+/** {0}, {1}… are replaced by `args`. */
 export function t(key, ...args) {
     const text = STRINGS.en[key] ?? key;
     return text.replace(/\{(\d+)\}/g, (match, i) => (i < args.length ? String(args[i]) : match));
@@ -81,9 +83,7 @@ export function applyTranslations(root = document) {
     root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle)));
 }
 
-/** Calls the backend with the session cookie (server messages come back in English, the default locale).
- * Throws an Error carrying the server message and `status` on non-2xx responses.
- * `signal` (optional) cancels the request: it then rejects with an AbortError. */
+/** Throws an Error with the server message and `status` on non-2xx responses. */
 export async function api(method, url, body, { signal } = {}) {
     const isForm = body instanceof FormData;
     const res = await fetch(url, {
@@ -105,8 +105,7 @@ function apiError(message, status) {
     return error;
 }
 
-/** Like api(), for endpoints that stream NDJSON with `?stream=1`: `onMessage` gets every line as
- * it arrives. A line with `error` (sent after the stream started) throws like a failed api() call. */
+/** For NDJSON streams (`?stream=1`). A line with `error`, sent after the stream started, throws like api(). */
 export async function apiStream(method, url, body, { signal, onMessage }) {
     const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}stream=1`, {
         method,

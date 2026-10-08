@@ -1,8 +1,5 @@
-// Place search for the start/destination fields, proxied so the Stadia key stays on the server.
-// - Stadia autocomplete (fast) while typing:
-//   https://docs.stadiamaps.com/geocoding-search-autocomplete/autocomplete/
-// - Full search (Enter): Stadia + Photon. Stadia's index misses small OSM villages/hamlets
-//   (e.g. Vezzolacca), Photon is built directly from OSM but the public server is slow (6-15 s).
+// Proxied so the Stadia key stays on the server. Stadia autocomplete while typing; the full search
+// (Enter) adds Photon, which finds small villages Stadia misses but is slow (6-15 s)
 const STADIA_AUTOCOMPLETE_URL = "https://api.stadiamaps.com/geocoding/v1/autocomplete";
 const PHOTON_URL = process.env.PHOTON_URL || "https://photon.komoot.io/api";
 const PHOTON_USER_AGENT = "trackmate-backend/1.0 (SafeTrack thesis, route planner)";
@@ -14,8 +11,7 @@ const DUPLICATE_DISTANCE_DEG = 0.002;
 const DUPLICATE_LABEL_DISTANCE_DEG = 0.05;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 1000;
-// Per-user cap on searches, so one user can't burn the Stadia credits. Typing with the
-// page's 300 ms debounce stays well below it.
+// Per user, so one user can't burn the Stadia credits. Typing stays well below it
 const USER_LIMIT_PER_MINUTE = 30;
 
 export interface GeocodeResult {
@@ -37,7 +33,7 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 const userWindows = new Map<number, { start: number; count: number }>();
 
-/** True when the user still has searches left in the current minute (and counts this one). */
+/** Counts this search. */
 export function takeGeocodeQuota(userId: number): boolean {
     const now = Date.now();
     const window = userWindows.get(userId);
@@ -58,7 +54,6 @@ async function cached<T extends GeocodeResult>(key: string, load: () => Promise<
     if (entry && entry.expires > Date.now()) return entry.results as T[];
 
     const results = await load();
-    // Map keeps insertion order: drop the oldest entry when full
     if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value!);
     cache.set(key, { expires: Date.now() + CACHE_TTL_MS, results });
     return results;
@@ -134,7 +129,7 @@ function photon(text: string, focus?: Focus): Promise<PhotonResult[]> {
     });
 }
 
-/** Lowercase, no accents, single spaces: "Città " -> "citta". */
+/** "Città " -> "citta" */
 function normalize(text: string): string {
     return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -146,8 +141,7 @@ function isDuplicate(a: GeocodeResult, b: GeocodeResult): boolean {
     return name(a) === name(b) && near(DUPLICATE_DISTANCE_DEG);
 }
 
-/** Suggestions for `text`, biased towards the focus point when given.
- * `full` also asks Photon and merges its results in (slower). */
+/** `full` also asks Photon (slower). */
 export async function geocode(text: string, lang: string, focus?: Focus, full = false): Promise<GeocodeResult[]> {
     if (!full) return stadia(text, lang, focus);
 
@@ -158,9 +152,8 @@ export async function geocode(text: string, lang: string, focus?: Focus, full = 
 
     const photonResults = fromPhoton.status === "fulfilled" ? fromPhoton.value : [];
     const stadiaResults = fromStadia.status === "fulfilled" ? fromStadia.value : [];
-    // Promote only places whose name contains what was typed: Photon also fuzzy-matches
-    // (vezzolacca -> Venzolasca, Corsica), those go after Stadia's results
-    // ("vezzolacca" or "vezzolacca vernasca" both promote Vezzolacca)
+    // Photon also fuzzy-matches (vezzolacca -> Venzolasca, Corsica): only places whose name contains
+    // what was typed go first
     const typed = normalize(text);
     const promoted = (r: PhotonResult) => {
         const name = normalize(r.label.split(",")[0]);

@@ -1,10 +1,8 @@
 import { SMALL_COMPONENT_SIZE } from "./config";
 import { GraphEdge, RoutingGraph } from "./types";
 
-/** Marks the nodes start, stops and destination may snap to: those in a strongly connected
- * component of at least SMALL_COMPONENT_SIZE nodes, and always the largest one. A point next to
- * a car park reached only by a private road would otherwise snap onto an island with no route
- * out, as OSRM avoids by snapping to "big" components only. Iterative Tarjan, O(V + E). */
+/** Points may snap only to large connected parts of the network: a point next to a car park reached
+ * only by a private road would otherwise snap onto an island with no way out. Iterative Tarjan. */
 export function markSnappable(graph: RoutingGraph, adjacency: Map<string, GraphEdge[]>): void {
     const ids = Object.keys(graph.nodes);
     const position = new Map(ids.map((id, i) => [Number(id), i]));

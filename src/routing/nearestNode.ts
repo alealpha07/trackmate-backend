@@ -1,8 +1,6 @@
 import { RoutingGraph } from "./types";
 
-/** Brute-force nearest node, among `usable` nodes when given. Prefers nodes in a large connected
- * component (components.ts), so a point is never snapped onto an island without a way out.
- * Fine at BBOX size for a few lookups per request. */
+/** Brute force, fine for a few lookups per request. Prefers nodes where points may snap (components.ts). */
 export function nearestNode(graph: RoutingGraph, lat: number, lon: number, usable: Set<string> | null = null): string | null {
     let bestId: string | null = null;
     let bestDist = Infinity;

@@ -7,6 +7,7 @@ services:
     volumes:
       - ./appdb:/usr/src/app/prisma/data
       - ./appuploads:/usr/src/app/uploads
+      # Map (cache/osm) and elevation (cache/dem) tiles, kept across rebuilds
       - ./appcache:/usr/src/app/cache
     environment:
       - DATABASE_URL=file:./data/dev.db
@@ -16,6 +17,11 @@ services:
       - PUBLIC_URL=https://PUT_YOUR_PUBLIC_DOMAIN
       - ANDROID_PACKAGE_NAME=com.example.trackmate
       - ANDROID_CERT_SHA256=PUT_YOUR_APP_SIGNING_SHA256
-      - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter
+      # Comma-separated: tried in order when an instance is overloaded
+      - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter
+      # Tile caches: re-downloaded after TTL days, deleted when unused that long; least recently used go past MAX_MB
       - OSM_CACHE_TTL_DAYS=30
+      - OSM_CACHE_MAX_MB=1024
+      - DEM_CACHE_TTL_DAYS=365
+      - DEM_CACHE_MAX_MB=2048
       - STADIA_API_KEY=PUT_YOUR_STADIA_API_KEY

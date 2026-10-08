@@ -1,4 +1,5 @@
-import { RAILWAYS } from "./config";
+import { DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "./config";
+import { Elevation } from "./elevation";
 import { haversineMeters } from "./haversine";
 import { levelOfTrafficStress } from "./lts";
 import {
@@ -7,10 +8,8 @@ import {
 import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable";
 import { BBox, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph } from "./types";
 
-/** Whether bikes may use the way at all. Sidewalks alone would dwarf every other road type in a
- * well-mapped city, so footway/pedestrian ways are kept only when they're explicitly legal for
- * bikes; steps are never routable. Motorways, trunk roads and motorroads are closed to bikes
- * unless signed otherwise (in Italy: CdS art. 175), and so are private roads. */
+/** Footways only when bikes are explicitly allowed, never steps. Motorways, trunk roads and private
+ * roads are closed to bikes unless signed otherwise. */
 function isRoutable(tags: Tags): boolean {
     const highway = tags.highway;
     if (!highway || highway === "steps") return false;
@@ -22,7 +21,6 @@ function isRoutable(tags: Tags): boolean {
     return true;
 }
 
-/** Safety attributes of a way for a cyclist riding it in `direction`. */
 function edgeProfile(tags: Tags, direction: Direction) {
     const infra = bikeInfra(tags, direction);
     const parked = hasParkedCars(tags, direction);
@@ -40,19 +38,52 @@ function edgeProfile(tags: Tags, direction: Direction) {
     };
 }
 
-/** Directed routing graph built in memory from the Overpass elements of the request's BBOX. */
-export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGraph {
+/** Grade of each edge riding forward, measured over GRADE_WINDOW_METERS of the way around it. On
+ * bridges and in tunnels the elevation data shows the river or the hill, so the way runs straight
+ * between its ends. */
+function wayGrades(points: OverpassNode[], tags: Tags, elevation: Elevation): number[] {
+    const along = [0];
+    for (let i = 1; i < points.length; i++) {
+        along.push(along[i - 1] + haversineMeters(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon));
+    }
+    const length = along[along.length - 1];
+    if (length <= 0) return points.slice(1).map(() => 0);
+
+    let heights = points.map((p) => elevation(p.lat, p.lon));
+    const raised = (tags.bridge && tags.bridge !== "no") || (tags.tunnel && tags.tunnel !== "no");
+    if (raised) {
+        const [first, last] = [heights[0], heights[heights.length - 1]];
+        heights = along.map((d) => first + ((last - first) * d) / length);
+    }
+    let segment = 0;
+    const heightAt = (d: number) => {
+        if (along[segment] > d) segment = 0;
+        while (segment < along.length - 2 && along[segment + 1] < d) segment++;
+        const span = along[segment + 1] - along[segment];
+        const t = span > 0 ? (d - along[segment]) / span : 0;
+        return heights[segment] + (heights[segment + 1] - heights[segment]) * Math.min(1, Math.max(0, t));
+    };
+
+    const window = Math.min(GRADE_WINDOW_METERS, length);
+    return along.slice(1).map((end, i) => {
+        const middle = (along[i] + end) / 2;
+        const start = Math.min(Math.max(0, middle - window / 2), length - window);
+        return (heightAt(start + window) - heightAt(start)) / window;
+    });
+}
+
+/** Without `elevation`, every grade is 0. */
+export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: Elevation): RoutingGraph {
     const nodeById = new Map<number, OverpassNode>();
     const ways: OverpassWay[] = [];
-    // Nodes of railway tracks: a road reaching one crosses the tracks at grade
     const railNodes = new Set<number>();
     for (const el of elements) {
         if (el.type === "node") nodeById.set(el.id, el);
         else if (el.tags?.highway) ways.push(el);
         else if (RAILWAYS.includes(el.tags?.railway ?? "")) el.nodes.forEach((id) => railNodes.add(id));
     }
-    // A crossing is a point: the tracks hazard goes on the edge arriving at it, so each pass over the
-    // tracks counts once whatever the direction (edges along the tracks arrive at one too)
+    // A road node on a track is a crossing: its hazard goes on the edge arriving there, so each pass
+    // counts once in either direction
     const crossing = (to: number) => (railNodes.has(to) ? HAZARD_OR.tracks : 1);
 
     const usedNodeIds = new Set<number>();
@@ -66,6 +97,12 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
         const forward = only === "backward" ? null : edgeProfile(tags, "forward");
         const backward = only === "forward" ? null : edgeProfile(tags, "backward");
 
+        const points = way.nodes.map((id) => nodeById.get(id));
+        const grades = elevation && points.every(Boolean)
+            ? wayGrades(points as OverpassNode[], tags, elevation)
+            : way.nodes.map(() => 0);
+        const downhill = (grade: number) => (grade < DOWNHILL_GRADE ? HAZARD_OR.downhill : 1);
+
         for (let i = 0; i < way.nodes.length - 1; i++) {
             const a = nodeById.get(way.nodes[i]);
             const b = nodeById.get(way.nodes[i + 1]);
@@ -77,11 +114,18 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox): RoutingGrap
             usedNodeIds.add(a.id);
             usedNodeIds.add(b.id);
 
+            const grade = grades[i];
             if (forward) {
-                edges.push({ id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, risk: forward.risk * crossing(b.id) });
+                edges.push({
+                    id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, grade,
+                    risk: forward.risk * crossing(b.id) * downhill(grade),
+                });
             }
             if (backward) {
-                edges.push({ id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, risk: backward.risk * crossing(a.id) });
+                edges.push({
+                    id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, grade: -grade,
+                    risk: backward.risk * crossing(a.id) * downhill(-grade),
+                });
             }
         }
     }

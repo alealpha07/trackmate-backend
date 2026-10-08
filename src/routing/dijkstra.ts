@@ -6,7 +6,7 @@ export interface RouteResult {
     edges: GraphEdge[];
     totalCost: number;
     totalDistanceMeters: number;
-    /** Σ distance · risk, the Safest cost whatever the policy (for comparing routes). */
+    /** The Safest cost whatever the policy, for comparing routes. */
     totalRisk: number;
 }
 
@@ -21,7 +21,6 @@ export function buildAdjacency(graph: RoutingGraph): Map<string, GraphEdge[]> {
     return adjacency;
 }
 
-/** Cheapest path by `cost`, using only the edges `allowed` accepts (all when null). */
 export function dijkstra(
     adjacency: Map<string, GraphEdge[]>,
     startId: string,

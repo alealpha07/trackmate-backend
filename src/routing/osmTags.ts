@@ -2,7 +2,7 @@ import { DEFAULT_LANES, DEFAULT_MAXSPEED_KMH } from "./config";
 
 export type Tags = Record<string, string>;
 
-/** Which way an edge runs along its OSM way: forward follows the order of the way's nodes. */
+/** forward follows the order of the way's nodes. */
 export type Direction = "forward" | "backward";
 
 /** Bike infrastructure on the cyclist's side of a road, best first. */
@@ -10,7 +10,7 @@ export type BikeInfra = "track" | "lane" | "shared" | "none";
 
 const INFRA_RANK: Record<BikeInfra, number> = { track: 3, lane: 2, shared: 1, none: 0 };
 
-/** Ways without motor traffic, physically separated from roads. */
+/** Ways without motor traffic. */
 export const PATH_HIGHWAYS = ["cycleway", "path", "track", "bridleway", "footway", "pedestrian"];
 
 const BIKE_ALLOWED = ["yes", "designated", "permissive"];
@@ -19,14 +19,12 @@ export function bicycleAllowed(tags: Tags): boolean {
     return BIKE_ALLOWED.includes(tags.bicycle ?? "");
 }
 
-/** The side of the way a cyclist rides on in this direction. Right-hand traffic (Italy): riding
- * forward the right side, riding backward the left side of the way. */
+/** Right-hand traffic: riding backward is on the left side of the way. */
 function side(direction: Direction): "right" | "left" {
     return direction === "forward" ? "right" : "left";
 }
 
-/** Direction motor traffic is limited to, null on two-way roads. Roundabouts are one-way unless
- * tagged otherwise. */
+/** null on two-way roads. Roundabouts are one-way unless tagged otherwise. */
 export function carDirection(tags: Tags): Direction | null {
     const oneway = tags.oneway;
     if (oneway === "-1") return "backward";
@@ -36,9 +34,8 @@ export function carDirection(tags: Tags): Direction | null {
     return null;
 }
 
-/** Direction bikes are limited to, null when both are allowed. Bikes are often exempt from a car
- * oneway restriction (contraflow cycling): `oneway:bicycle=no`, "opposite" lanes, or a side
- * lane running against the traffic. */
+/** null when both directions are allowed. Bikes are often exempt from a car one-way (contraflow):
+ * `oneway:bicycle=no`, "opposite" lanes, or a side lane running against the traffic. */
 export function bicycleDirection(tags: Tags): Direction | null {
     const own = tags["oneway:bicycle"];
     if (own === "no") return null;
@@ -59,7 +56,7 @@ function infraOf(value: string | undefined): BikeInfra {
         case "lane":
         case "opposite_lane":
             return "lane";
-        // Teschke's "shared lane" includes shared bike-bus lanes (Table 1)
+        // Shared bike-bus lanes count as shared lanes
         case "shared_lane":
         case "share_busway":
         case "opposite_share_busway":
@@ -69,7 +66,6 @@ function infraOf(value: string | undefined): BikeInfra {
     }
 }
 
-/** Best bike infrastructure available riding in `direction`, from the `cycleway[:side]` tags. */
 export function bikeInfra(tags: Tags, direction: Direction): BikeInfra {
     const own = side(direction);
     const other = own === "right" ? "left" : "right";
@@ -98,9 +94,8 @@ export function bikeInfra(tags: Tags, direction: Direction): BikeInfra {
 
 const NO_PARKING = ["no", "none", "no_parking", "no_stopping", "fire_lane"];
 
-/** Parked cars on the cyclist's side (Teschke's "parked cars", Table 4 note a). Both the current
- * `parking:<side>` scheme and the older `parking:lane:<side>` one are read. Untagged: assumed
- * parked, which is Teschke's reference (OR 1.00), so missing data never makes a road look safer. */
+/** On the cyclist's side, from the current `parking:<side>` scheme or the older `parking:lane:<side>`.
+ * Untagged counts as parked, the riskiest case, so missing data never makes a road look safer. */
 export function hasParkedCars(tags: Tags, direction: Direction): boolean {
     const own = side(direction);
     for (const key of [`parking:${own}`, "parking:both", `parking:lane:${own}`, "parking:lane:both"]) {
@@ -110,14 +105,13 @@ export function hasParkedCars(tags: Tags, direction: Direction): boolean {
     return true;
 }
 
-// OSM wiki, Key:surface, "unpaved" values
+// The OSM wiki's unpaved surface values
 const UNPAVED_SURFACES = [
     "unpaved", "compacted", "fine_gravel", "gravel", "rock", "pebblestone", "ground", "dirt", "earth",
     "grass", "grass_paver", "mud", "sand", "woodchips", "stepping_stones", "snow", "ice", "salt",
 ];
 
-/** From `surface`, else `tracktype` (only grade1 is paved), else the usual surface of the way type:
- * tracks and bridleways unpaved, paths unpaved unless they are designated for bikes. */
+/** Without `surface` or `tracktype`: tracks and bridleways unpaved, paths unpaved unless designated for bikes. */
 export function isPaved(tags: Tags): boolean {
     if (tags.surface) return !UNPAVED_SURFACES.includes(tags.surface);
     if (tags.tracktype) return tags.tracktype === "grade1";
@@ -126,21 +120,19 @@ export function isPaved(tags: Tags): boolean {
     return true;
 }
 
-/** Road works on a road that is still open. `highway=construction` (closed) is never routable. */
+/** Road works on an open road (`highway=construction` is a closed one, never routable). */
 export function hasConstruction(tags: Tags): boolean {
     return tags.construction !== undefined && tags.construction !== "no";
 }
 
-/** Tram rails in the roadway, along the way: `embedded_rails[:lanes][:forward|backward]=tram|...`, or
- * tracks mapped on the road way itself. Crossings are found from shared nodes instead (buildGraph.ts). */
+/** Rails along the roadway. Crossings come from shared nodes instead (buildGraph.ts). */
 export function hasEmbeddedRails(tags: Tags): boolean {
     if (tags.railway === "tram") return true;
     return Object.entries(tags).some(([key, value]) => key.startsWith("embedded_rails") && value !== "no" && /[^|]/.test(value));
 }
 
-/** Speed limit in km/h from a `maxspeed`-style value: a number, "30 mph", or an implicit limit
- * such as "IT:urban" or "DE:zone30". Only the LTS band (up to 25, 30, 35, 40+ mph) matters, so
- * the implicit limits are approximate: urban 50, rural 90 (CdS art. 142, other roads outside towns). */
+/** km/h from a number, "30 mph", or an implicit limit such as "IT:urban" or "DE:zone30". Implicit
+ * limits are approximate: only the traffic stress band matters. */
 function parseSpeed(value: string | undefined): number | null {
     if (!value) return null;
     const text = value.trim().toLowerCase();
@@ -156,7 +148,6 @@ function parseSpeed(value: string | undefined): number | null {
     return implicit[text.split(":").pop()!] ?? null;
 }
 
-/** Speed limit riding in `direction`, in km/h. Missing: DEFAULT_MAXSPEED_KMH. */
 export function maxspeedKmh(tags: Tags, direction: Direction): number {
     for (const key of [`maxspeed:${direction}`, "maxspeed", "maxspeed:type", "source:maxspeed", "zone:maxspeed"]) {
         const speed = parseSpeed(tags[key]);
@@ -170,12 +161,11 @@ function positiveInt(value: string | undefined): number | null {
     return n > 0 ? n : null;
 }
 
-/** Motor traffic lanes in both directions. Missing: DEFAULT_LANES, or 1 on a one-way road. */
+/** Both directions. Missing: DEFAULT_LANES, or 1 on a one-way road. */
 export function totalLanes(tags: Tags): number {
     return positiveInt(tags.lanes) ?? (carDirection(tags) ? 1 : DEFAULT_LANES);
 }
 
-/** Through lanes next to a cyclist riding in `direction` (Mekuria Tables 2-3, "per direction"). */
 export function lanesPerDirection(tags: Tags, direction: Direction): number {
     const total = totalLanes(tags);
     // One-way: every lane goes the same way (or comes towards a contraflow cyclist)
