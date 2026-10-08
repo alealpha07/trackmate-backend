@@ -1,4 +1,6 @@
+import { driveSide, featuresContaining } from "@rapideditor/country-coder";
 import { DEFAULT_LANES, DEFAULT_MAXSPEED_KMH } from "./config";
+import { BBox } from "./types";
 
 export type Tags = Record<string, string>;
 
@@ -19,9 +21,27 @@ export function bicycleAllowed(tags: Tags): boolean {
     return BIKE_ALLOWED.includes(tags.bicycle ?? "");
 }
 
-/** Right-hand traffic: riding backward is on the left side of the way. */
-function side(direction: Direction): "right" | "left" {
-    return direction === "forward" ? "right" : "left";
+export type DrivingSide = "right" | "left";
+
+/** The side every country in the box drives on, null when it reaches countries driving on both. */
+export function drivingSideIn(bbox: BBox): DrivingSide | null {
+    const sides = new Set(featuresContaining([bbox.west, bbox.south, bbox.east, bbox.north])
+        .map((feature) => feature.properties.driveSide)
+        .filter((side) => side !== undefined));
+    return sides.size === 1 ? ([...sides][0] as DrivingSide) : null;
+}
+
+/** A `driving_side` on the way wins over the country's rule: the graph's when it has one, else the
+ * one at the given node. */
+export function drivingSide(tags: Tags, graphSide: DrivingSide | null, lat: number, lon: number): DrivingSide {
+    if (tags.driving_side === "left" || tags.driving_side === "right") return tags.driving_side;
+    return graphSide ?? (driveSide([lon, lat]) === "left" ? "left" : "right");
+}
+
+/** The side of the way a cyclist rides on: forward is on the driving side. */
+function side(direction: Direction, driving: DrivingSide): DrivingSide {
+    const opposite = driving === "right" ? "left" : "right";
+    return direction === "forward" ? driving : opposite;
 }
 
 /** null on two-way roads. Roundabouts are one-way unless tagged otherwise. */
@@ -66,8 +86,8 @@ function infraOf(value: string | undefined): BikeInfra {
     }
 }
 
-export function bikeInfra(tags: Tags, direction: Direction): BikeInfra {
-    const own = side(direction);
+export function bikeInfra(tags: Tags, direction: Direction, driving: DrivingSide): BikeInfra {
+    const own = side(direction, driving);
     const other = own === "right" ? "left" : "right";
     const cars = carDirection(tags);
     const plain = tags.cycleway;
@@ -96,8 +116,8 @@ const NO_PARKING = ["no", "none", "no_parking", "no_stopping", "fire_lane"];
 
 /** On the cyclist's side, from the current `parking:<side>` scheme or the older `parking:lane:<side>`.
  * Untagged counts as parked, the riskiest case, so missing data never makes a road look safer. */
-export function hasParkedCars(tags: Tags, direction: Direction): boolean {
-    const own = side(direction);
+export function hasParkedCars(tags: Tags, direction: Direction, driving: DrivingSide): boolean {
+    const own = side(direction, driving);
     for (const key of [`parking:${own}`, "parking:both", `parking:lane:${own}`, "parking:lane:both"]) {
         const value = tags[key];
         if (value !== undefined) return !NO_PARKING.includes(value);

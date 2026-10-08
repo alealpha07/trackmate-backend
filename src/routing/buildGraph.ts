@@ -1,9 +1,11 @@
+import { nodeExtent } from "./bbox";
 import { DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "./config";
 import { Elevation } from "./elevation";
 import { haversineMeters } from "./haversine";
 import { levelOfTrafficStress } from "./lts";
 import {
-    Direction, Tags, bicycleAllowed, bicycleDirection, bikeInfra, hasConstruction, hasEmbeddedRails, hasParkedCars, isPaved,
+    Direction, DrivingSide, Tags, bicycleAllowed, bicycleDirection, bikeInfra, drivingSide, drivingSideIn, hasConstruction,
+    hasEmbeddedRails, hasParkedCars, isPaved,
 } from "./osmTags";
 import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable";
 import { BBox, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph } from "./types";
@@ -21,9 +23,9 @@ function isRoutable(tags: Tags): boolean {
     return true;
 }
 
-function edgeProfile(tags: Tags, direction: Direction) {
-    const infra = bikeInfra(tags, direction);
-    const parked = hasParkedCars(tags, direction);
+function edgeProfile(tags: Tags, direction: Direction, driving: DrivingSide) {
+    const infra = bikeInfra(tags, direction, driving);
+    const parked = hasParkedCars(tags, direction, driving);
     const paved = isPaved(tags);
     const type = routeType(tags, infra, parked, paved);
     return {
@@ -85,6 +87,7 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
     // A road node on a track is a crossing: its hazard goes on the edge arriving there, so each pass
     // counts once in either direction
     const crossing = (to: number) => (railNodes.has(to) ? HAZARD_OR.tracks : 1);
+    const graphSide = drivingSideIn(nodeExtent(elements, bbox));
 
     const usedNodeIds = new Set<number>();
     const edges: GraphEdge[] = [];
@@ -93,11 +96,15 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
         const tags = way.tags ?? {};
         if (!isRoutable(tags)) continue;
 
-        const only = bicycleDirection(tags);
-        const forward = only === "backward" ? null : edgeProfile(tags, "forward");
-        const backward = only === "forward" ? null : edgeProfile(tags, "backward");
-
         const points = way.nodes.map((id) => nodeById.get(id));
+        const first = points.find(Boolean);
+        if (!first) continue;
+        const driving = drivingSide(tags, graphSide, first.lat, first.lon);
+
+        const only = bicycleDirection(tags);
+        const forward = only === "backward" ? null : edgeProfile(tags, "forward", driving);
+        const backward = only === "forward" ? null : edgeProfile(tags, "backward", driving);
+
         const grades = elevation && points.every(Boolean)
             ? wayGrades(points as OverpassNode[], tags, elevation)
             : way.nodes.map(() => 0);

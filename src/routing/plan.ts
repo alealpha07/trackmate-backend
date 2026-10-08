@@ -1,4 +1,4 @@
-import { planningBBox } from "./bbox";
+import { nodeExtent, planningBBox } from "./bbox";
 import { buildGraph } from "./buildGraph";
 import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
 import { markSnappable } from "./components";
@@ -8,7 +8,7 @@ import { Policy, edgeCost, preferBikeways } from "./edgeWeight";
 import { RouteFilters, edgeFilter } from "./filters";
 import { nearestNode } from "./nearestNode";
 import { loadTiles } from "./tileCache";
-import { BBox, GraphEdge, LatLng, OverpassElement, PlannedRoute, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types";
+import { GraphEdge, LatLng, PlannedRoute, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types";
 
 interface CachedGraph {
     graph: RoutingGraph;
@@ -39,19 +39,6 @@ async function cachedGraph(key: string, build: () => Promise<CachedGraph>): Prom
     graphCache.delete(key);
     graphCache.set(key, entry);
     return entry;
-}
-
-/** Ways reach out of the box they were fetched for, and their grades need the elevation there too. */
-function nodeExtent(elements: OverpassElement[], bbox: BBox): BBox {
-    const extent = { ...bbox };
-    for (const el of elements) {
-        if (el.type !== "node") continue;
-        extent.south = Math.min(extent.south, el.lat);
-        extent.north = Math.max(extent.north, el.lat);
-        extent.west = Math.min(extent.west, el.lon);
-        extent.east = Math.max(extent.east, el.lon);
-    }
-    return extent;
 }
 
 function stats(distance: number, risk: number, offBikeways: number | undefined): RouteStats {
