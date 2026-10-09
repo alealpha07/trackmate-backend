@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
-import { User } from "@prisma/client";
+import { User, Vehicle } from "@prisma/client";
 import { sanitizeParams, prisma, isAuthenticated, UPLOAD_DIR } from "../utils";
+import { parseVehicle, vehicleClass, vehicleId } from "../vehicles";
 import multer from "multer"
 import path from "path"
 import fs from "fs";
@@ -12,8 +13,13 @@ const TRAVEL_UPLOAD_DIR = path.join(UPLOAD_DIR, "travel");
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+function vehicleFilter(query: any): Vehicle | undefined | null {
+    if (query.vehicle === undefined || query.vehicle === "") return undefined;
+    return parseVehicle(query.vehicle);
+}
+
 // Upload track JSON
-router.post("/file", upload.single("file"), isAuthenticated, async (req: Request, res: Response): Promise<any> => {
+router.post("/file", isAuthenticated, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
     try {
         if (!req.file) {
             return res.status(422).send(res.__("file.errors.missing"));
@@ -28,7 +34,15 @@ router.post("/file", upload.single("file"), isAuthenticated, async (req: Request
             );
         }
 
-        const trackId = sanitizedParams.id
+        const trackId = parseInt(sanitizedParams.id);
+        const track = await prisma.track.findUnique({ where: { id: trackId } });
+        if (!track) {
+            return res.status(404).send(res.__("track.errors.missing"));
+        }
+        if (track.userId !== (req.user as User).id) {
+            return res.status(403).send(res.__("track.errors.not-owner"));
+        }
+
         const outputPath = path.join(FINAL_UPLOAD_DIR, `${trackId}.json`);
 
         fs.mkdirSync(FINAL_UPLOAD_DIR, { recursive: true });
@@ -72,16 +86,21 @@ router.get("/file", isAuthenticated, async (req: Request, res: Response): Promis
 // Create Track
 router.post("/", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
-        const requiredParams = ["name"];
+        const requiredParams = ["name", "vehicle"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+        const vehicle = parseVehicle(sanitizedParams.vehicle);
+        if (!vehicle) {
+            return response.status(422).send(response.__("track.errors.vehicle"));
         }
 
         const track = await prisma.track.create({
             data: {
                 userId: (request.user as User).id,
-                name: sanitizedParams.name
+                name: sanitizedParams.name,
+                vehicle
             }
         });
         response.send({id : track.id});
@@ -100,10 +119,27 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const track = await prisma.track.findUnique({ where: { id: parseInt(sanitizedParams.id) } });
+        if (!track) {
+            return response.status(404).send(response.__("track.errors.missing"));
+        }
+        let vehicle = track.vehicle;
+        if (request.body.vehicle != null) {
+            const requested = parseVehicle(request.body.vehicle);
+            if (!requested) {
+                return response.status(422).send(response.__("track.errors.vehicle"));
+            }
+            if (vehicleClass(requested) !== vehicleClass(track.vehicle)) {
+                return response.status(422).send(response.__("track.errors.vehicle-class"));
+            }
+            vehicle = requested;
+        }
+
         const travel = await prisma.travel.create({
             data: {
                 userId: (request.user as User).id,
-                trackId: sanitizedParams.id,
+                trackId: track.id,
+                vehicle,
                 time: sanitizedParams.time,
                 averageSpeed: sanitizedParams.averageSpeed,
                 maxSpeed: sanitizedParams.maxSpeed,
@@ -119,7 +155,7 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
 })
 
 // Upload travel points (with per-point speed)
-router.post("/travel/file", upload.single("file"), isAuthenticated, async (req: Request, res: Response): Promise<any> => {
+router.post("/travel/file", isAuthenticated, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
     try {
         if (!req.file) {
             return res.status(422).send(res.__("file.errors.missing"));
@@ -185,7 +221,7 @@ router.get("/travel/file", isAuthenticated, async (req: Request, res: Response):
 // Get travels
 router.get("/travel", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
-        let travels = await prisma.travel.findMany({
+        const travels = await prisma.travel.findMany({
             where: {
                 userId: (request.user as User).id
             },
@@ -200,14 +236,14 @@ router.get("/travel", isAuthenticated, async (request: Request, response: Respon
                 }
             }
         });
-        travels = travels.map((t) => {
+        response.send(travels.map((t) => {
             return {
                 ...t,
+                vehicle: vehicleId(t.vehicle),
                 dateTimeString: t.dateTime.toLocaleDateString('it-IT'),
                 name: t.Track?.name || "unknown"
             }
-        })
-        response.send(travels);
+        }));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);
@@ -223,9 +259,15 @@ router.get("/travel/details", isAuthenticated, async (request: Request, response
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        let travels = await prisma.travel.findMany({
+        const vehicle = vehicleFilter(request.query);
+        if (vehicle === null) {
+            return response.status(422).send(response.__("track.errors.vehicle"));
+        }
+
+        const travels = await prisma.travel.findMany({
             where: {
-                trackId: parseInt(sanitizedParams.id)
+                trackId: parseInt(sanitizedParams.id),
+                vehicle
             },
             include: {
                 Track: {
@@ -240,15 +282,15 @@ router.get("/travel/details", isAuthenticated, async (request: Request, response
                 }
             }
         });
-        travels = travels.map((t) => {
+        response.send(travels.map((t) => {
             return {
                 ...t,
+                vehicle: vehicleId(t.vehicle),
                 dateTimeString: t.dateTime.toLocaleDateString('it-IT'),
                 name: t.Track?.name || "unknown",
                 username: t.User?.username || "unknown"
             }
-        })
-        response.send(travels);
+        }));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);
@@ -276,11 +318,16 @@ router.get(
       }
 
       const trackId = parseInt(sanitizedParams.id);
+      const vehicle = vehicleFilter(request.query);
+      if (vehicle === null) {
+        return response.status(422).send(response.__("track.errors.vehicle"));
+      }
 
       const leaderboard = await prisma.travel.groupBy({
         by: ["userId"],
         where: {
           trackId: trackId,
+          vehicle,
         },
         _min: {
           time: true,
@@ -324,15 +371,33 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
+        const userId = (request.user as User).id;
+        const vehicle = request.body.vehicle == null ? undefined : parseVehicle(request.body.vehicle);
+        if (vehicle === null) {
+            return response.status(422).send(response.__("track.errors.vehicle"));
+        }
 
-        await prisma.track.update({
-            where: {
-                id: parseInt(sanitizedParams.id)
-            },
-            data: {
-                name: sanitizedParams.name
+        // in a transaction so no other travel slips in
+        const error = await prisma.$transaction(async (tx) => {
+            const track = await tx.track.findUnique({ where: { id: parseInt(sanitizedParams.id) } });
+            if (!track) return { status: 404, key: "track.errors.missing" };
+            if (track.userId !== userId) return { status: 403, key: "track.errors.not-owner" };
+
+            if (vehicle && vehicleClass(vehicle) !== vehicleClass(track.vehicle)) {
+                const othersTravels = await tx.travel.count({ where: { trackId: track.id, userId: { not: userId } } });
+                if (othersTravels > 0) return { status: 409, key: "track.errors.vehicle-class-locked" };
+                // only the owner's travels are left, move them to the new vehicle
+                await tx.travel.updateMany({ where: { trackId: track.id }, data: { vehicle } });
             }
+            await tx.track.update({
+                where: { id: track.id },
+                data: { name: sanitizedParams.name, vehicle }
+            });
+            return null;
         });
+        if (error) {
+            return response.status(error.status).send(response.__(error.key));
+        }
         response.send(response.__("track.success.update"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
@@ -363,9 +428,13 @@ router.delete("/", isAuthenticated, async (request: Request, response: Response)
 })
 
 // Get Tracks and Best Performance Stats
-router.get("/", isAuthenticated, async (req: Request, res: Response) => {
+router.get("/", isAuthenticated, async (req: Request, res: Response): Promise<any> => {
     try {
         const userId = (req.user as User).id;
+        const vehicle = vehicleFilter(req.query);
+        if (vehicle === null) {
+            return res.status(422).send(res.__("track.errors.vehicle"));
+        }
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -373,6 +442,7 @@ router.get("/", isAuthenticated, async (req: Request, res: Response) => {
                 tracks: {
                     include: {
                         travels: {
+                            where: { vehicle },
                             select: {
                                 time: true,
                                 maxSpeed: true,
@@ -393,6 +463,7 @@ router.get("/", isAuthenticated, async (req: Request, res: Response) => {
                 return {
                     id: track.id,
                     name: track.name,
+                    vehicle: vehicleId(track.vehicle),
                     bestTime: null,
                     maxSpeed: null,
                     bestAverageSpeed: null,
@@ -407,6 +478,7 @@ router.get("/", isAuthenticated, async (req: Request, res: Response) => {
             return {
                 id: track.id,
                 name: track.name,
+                vehicle: vehicleId(track.vehicle),
                 bestTime,
                 maxSpeed,
                 bestAverageSpeed,
@@ -422,7 +494,7 @@ router.get("/", isAuthenticated, async (req: Request, res: Response) => {
 });
 
 // Get One Track + Best Travel Performances
-router.get("/details", isAuthenticated, async (req: Request, res: Response) => {
+router.get("/details", isAuthenticated, async (req: Request, res: Response): Promise<any> => {
     try {
         const requiredParams = ["id"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, req.query);
@@ -433,10 +505,15 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response) => {
                 .send(res.__("server.missing-params") + missingParams.map((p) => res.__(p)).join(", "));
         }
 
+        const vehicle = vehicleFilter(req.query);
+        if (vehicle === null) {
+            return res.status(422).send(res.__("track.errors.vehicle"));
+        }
+
         const track = await prisma.track.findUnique({
             where: { id: parseInt(sanitizedParams.id) },
             include: {
-                travels: true
+                travels: { where: { vehicle } }
             }
         });
 
@@ -445,10 +522,11 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response) => {
         }
 
         const userBestTravel = await prisma.travel.findFirst({
-            where: { trackId: parseInt(sanitizedParams.id), userId: (req.user as User).id },
+            where: { trackId: parseInt(sanitizedParams.id), userId: (req.user as User).id, vehicle },
             orderBy: { time: "asc" },
             select: {
                 id: true,
+                vehicle: true,
                 time: true,
                 maxSpeed: true,
                 distance: true,
@@ -461,10 +539,11 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response) => {
         });
 
         const overallBestTravel = await prisma.travel.findFirst({
-            where: { trackId: parseInt(sanitizedParams.id) },
+            where: { trackId: parseInt(sanitizedParams.id), vehicle },
             orderBy: { time: "asc" },
             select: {
                 id: true,
+                vehicle: true,
                 time: true,
                 distance: true,
                 maxSpeed: true,
@@ -485,13 +564,15 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response) => {
                 maxSpeed: parseFloat(travel.maxSpeed.toFixed(2)),
                 averageSpeed: parseFloat(travel.averageSpeed.toFixed(2)),
                 username: travel.User.username,
-                distance: travel.distance
+                distance: travel.distance,
+                vehicle: vehicleId(travel.vehicle)
             };
         };
 
         res.json({
             id: track.id,
             name: track.name,
+            vehicle: vehicleId(track.vehicle),
             ownerId: track.userId,
             userBest: formatStats(userBestTravel),
             overallBest: formatStats(overallBestTravel),

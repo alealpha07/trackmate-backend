@@ -24,10 +24,13 @@
 	},
 	"user": {
 		"success": {
-			"update": "User updated successfully!"
+			"update": "User updated successfully!",
+			"vehicles": "Vehicles updated successfully!"
 		},
 		"errors": {
-			"missing": "User not found!"
+			"missing": "User not found!",
+			"vehicle": "Unsupported vehicle!",
+			"no-vehicles": "Keep at least one vehicle!"
 		}
 	},
 	"track": {
@@ -36,6 +39,13 @@
 			"update": "Track updated successfully!",
 			"delete": "Track deleted successfully!",
 			"travel": "Travel saved successfully!"
+		},
+		"errors": {
+			"missing": "Track not found!",
+			"not-owner": "Only the owner can change this track!",
+			"vehicle": "Unsupported vehicle!",
+			"vehicle-class": "This vehicle can't travel this track!",
+			"vehicle-class-locked": "Other users travelled this track: keep a vehicle of the same kind!"
 		}
 	},
 	"friend": {
@@ -106,5 +116,9 @@
 	"start": "start",
 	"end": "end",
 	"vehicle": "vehicle",
-	"policy": "policy"
+	"policy": "policy",
+	"name": "name",
+	"vehicles": "vehicles",
+	"type": "type",
+	"progress": "progress"
 }
