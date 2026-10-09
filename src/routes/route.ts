@@ -2,13 +2,14 @@ import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
 import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
-import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
+import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES } from "../routing/config";
 import { Policy } from "../routing/edgeWeight";
 import { RouteFilters } from "../routing/filters";
 import { planRoute } from "../routing/plan";
 import { PartialDownloadError } from "../routing/tileCache";
 import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
 import { LatLng } from "../routing/types";
+import { isPlannable } from "../vehicles";
 
 const router = express.Router();
 
@@ -67,7 +68,7 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
             return response.status(422).send(response.__("route.errors.coordinates"));
         }
         const route = points as LatLng[];
-        if (!VEHICLES.includes(sanitizedParams.vehicle)) {
+        if (!isPlannable(sanitizedParams.vehicle)) {
             return response.status(422).send(response.__("route.errors.vehicle"));
         }
         if (!POLICIES.includes(sanitizedParams.policy)) {

@@ -1,4 +1,5 @@
-import { PrismaClient, QuestType, User, Track } from "@prisma/client";
+import { PrismaClient, User, Track, Vehicle } from "@prisma/client";
+import { dailyQuests } from "../src/quests";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
@@ -83,7 +84,14 @@ async function main() {
     const users: User[] = [];
     for (const u of userSeeds) {
         const hashedPassword = await bcrypt.hash(u.password, 10);
-        const user = await prisma.user.create({ data: { username: u.username, password: hashedPassword, bio: u.bio } });
+        const user = await prisma.user.create({
+            data: {
+                username: u.username,
+                password: hashedPassword,
+                bio: u.bio,
+                vehicles: { create: Object.values(Vehicle).map((vehicle) => ({ vehicle })) },
+            },
+        });
         users.push(user);
         copyFile(
             path.join(projectRoot, "seed-data", u.img),
@@ -99,6 +107,7 @@ async function main() {
                 data: {
                     name: `${user.username}-track-${i}`,
                     userId: user.id,
+                    vehicle: "CAR",
                 },
             });
             tracks.push(track);
@@ -121,6 +130,7 @@ async function main() {
                     time,
                     averageSpeed,
                     maxSpeed,
+                    vehicle: "CAR",
                 },
             });
         }
@@ -140,27 +150,7 @@ async function main() {
             postImageIndex++;
         }
 
-        const quests = [
-            {
-                description: "Travel 10 km",
-                experience: 100,
-                maxProgress: 10,
-                type: QuestType.TRAVEL_DISTANCE,
-            },
-            {
-                description: "Record a track",
-                experience: 50,
-                maxProgress: 1,
-                type: QuestType.RECORD_TRACK,
-            },
-            {
-                description: "Navigate a track",
-                experience: 75,
-                maxProgress: 1,
-                type: QuestType.NAVIGATE_TRACK,
-            },
-        ];
-
+        const quests = dailyQuests(Object.values(Vehicle));
         for (const q of quests) {
             await prisma.quest.create({ data: { ...q, userId: user.id } });
         }

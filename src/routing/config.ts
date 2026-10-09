@@ -82,6 +82,5 @@ export const DISPLAY_CYCLING_SPEED_KMH = 15;
 export const DEFAULT_MAXSPEED_KMH = 50;
 export const DEFAULT_LANES = 2;
 
-export const VEHICLES = ["bicycle"];
 export const POLICIES = ["safest", "shortest"];
 export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4"] as const;

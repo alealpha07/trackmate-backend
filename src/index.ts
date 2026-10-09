@@ -83,6 +83,8 @@ import search from "./routes/search";
 app.use("/search", search);
 import route from "./routes/route";
 app.use("/route", route);
+import vehicle from "./routes/vehicle";
+app.use("/vehicle", vehicle);
 // Public: assetlinks.json and the /p/:id pages behind shared post links
 import share from "./routes/share";
 app.use("/", share);

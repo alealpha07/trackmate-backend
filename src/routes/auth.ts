@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import { User } from "@prisma/client";
+import { User, Vehicle } from "@prisma/client";
 import { sanitizeParams, prisma, isAuthenticated } from "../utils";
 const PASSWORD_SALT = 10;
 const router = express.Router();
@@ -26,7 +26,9 @@ router.post("/register", async (request: Request, response: Response): Promise<a
         await prisma.user.create({
             data: {
                 username: sanitizedParams.username,
-                password: hashedPassword
+                password: hashedPassword,
+                // Every vehicle until the user edits the profile
+                vehicles: { create: Object.values(Vehicle).map((vehicle) => ({ vehicle })) }
             }
         })
         response.send(response.__("register.success"));

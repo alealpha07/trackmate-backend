@@ -5,6 +5,7 @@ import multer from "multer"
 import path from "path"
 import fs from "fs";
 import sharp from "sharp";
+import { parseVehicle, VEHICLES, vehicleId } from "../vehicles";
 
 const router = express.Router();
 const FINAL_UPLOAD_DIR = path.join(UPLOAD_DIR, "profile");
@@ -77,18 +78,61 @@ router.get("/image", isAuthenticated, async (req: Request, res: Response): Promi
 // Edit Profile
 router.put("/", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
-        const requiredParams = ["bio"];
+        // An empty bio is allowed: users start with one, so it must be possible to save it unchanged
+        const bio = request.body.bio;
+        if (typeof bio !== "string") {
+            return response.status(422).send(response.__("server.missing-params") + response.__("bio"));
+        }
+
+        await prisma.user.update({
+            where: { id: (request.user as User).id }, data: {
+                bio
+            }
+        });
+        response.send(response.__("user.success.update"));
+    } catch (error) {
+        response.status(500).send(response.__("server.error"));
+        console.error(error);
+    }
+})
+
+// Get the vehicles in the user's profile, in the order of GET /vehicle
+router.get("/vehicles", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+    try {
+        const vehicles = await prisma.userVehicle.findMany({ where: { userId: (request.user as User).id } });
+        const ids = vehicles.map((v) => vehicleId(v.vehicle));
+        response.json(VEHICLES.map((v) => v.id).filter((id) => ids.includes(id)));
+    } catch (error) {
+        response.status(500).send(response.__("server.error"));
+        console.error(error);
+    }
+})
+
+// Edit the vehicles in the user's profile: the next daily quests follow them
+router.put("/vehicles", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+    try {
+        const requiredParams = ["vehicles"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
-        
-        await prisma.user.update({
-            where: { id: (request.user as User).id }, data: {
-                bio: sanitizedParams.bio
-            }
-        });
-        response.send(response.__("user.success.update"));
+        if (!Array.isArray(sanitizedParams.vehicles)) {
+            return response.status(422).send(response.__("user.errors.vehicle"));
+        }
+        const vehicles = (sanitizedParams.vehicles as unknown[]).map(parseVehicle);
+        if (vehicles.some((v) => v === null)) {
+            return response.status(422).send(response.__("user.errors.vehicle"));
+        }
+        if (vehicles.length === 0) {
+            return response.status(422).send(response.__("user.errors.no-vehicles"));
+        }
+
+        const userId = (request.user as User).id;
+        await prisma.$transaction([
+            prisma.userVehicle.deleteMany({ where: { userId } }),
+            prisma.userVehicle.createMany({ data: [...new Set(vehicles)].map((vehicle) => ({ userId, vehicle: vehicle! })) }),
+        ]);
+        response.send(response.__("user.success.vehicles"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);

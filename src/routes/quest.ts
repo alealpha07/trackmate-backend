@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
 import { sanitizeParams, prisma, isAuthenticated } from "../utils";
+import { parseVehicle, vehicleId } from "../vehicles";
 
 const MAX_EXP_PER_LEVEL = 1000;
 const router = express.Router();
@@ -8,12 +9,17 @@ const router = express.Router();
 // Quest Increase
 router.post("/", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
-        const requiredParams = ["type", "progress"];
+        const requiredParams = ["type", "progress", "vehicle"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
-        const quests = await prisma.quest.findMany({ where: { userId: (request.user as User).id, type: sanitizedParams.type } });
+        const vehicle = parseVehicle(sanitizedParams.vehicle);
+        if (vehicle === null) {
+            return response.status(422).send(response.__("track.errors.vehicle"));
+        }
+        // Quests are per vehicle: a bicycle travel advances only the bicycle quests
+        const quests = await prisma.quest.findMany({ where: { userId: (request.user as User).id, type: sanitizedParams.type, vehicle } });
         
         for (const quest of quests) {
             await prisma.quest.update({
@@ -39,7 +45,8 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        const quest = await prisma.quest.findUnique({ where: { id: sanitizedParams.id } });
+        // Only the user's own quests: anyone else's would give them its experience
+        const quest = await prisma.quest.findFirst({ where: { id: sanitizedParams.id, userId: (request.user as User).id } });
 
         if (!quest) {
             return response.send(response.__("quest.errors.missing"));
@@ -81,7 +88,7 @@ router.get("/", isAuthenticated, async (request: Request, response: Response): P
     try {
         const quests = await prisma.quest.findMany({ where: { userId: (request.user as User).id } });
 
-        response.send(quests);
+        response.send(quests.map((quest) => ({ ...quest, vehicle: vehicleId(quest.vehicle) })));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);

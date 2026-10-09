@@ -26,6 +26,7 @@ model User {
   tracks                 Track[]
   quests                 Quest[]
   travels                Travel[]
+  vehicles               UserVehicle[]
   sentFriendRequests     FriendRequest[] @relation("SentRequests")
   receivedFriendRequests FriendRequest[] @relation("ReceivedRequests")
 }
@@ -44,7 +45,25 @@ model Quest {
   maxProgress Int
   progress    Int    @default(0)
   type        QuestType
+  vehicle     Vehicle
   user        User   @relation(fields: [userId], references: [id])
+}
+
+// The class of each (motor, bicycle, foot) is in src/vehicles.ts
+enum Vehicle {
+  CAR
+  MOTORCYCLE
+  BICYCLE
+  FOOT
+}
+
+// The vehicles in a user's profile: they choose the daily quests and what a track can be saved or travelled with
+model UserVehicle {
+  userId  Int
+  vehicle Vehicle
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, vehicle])
 }
 
 model FriendRequest {
@@ -61,6 +80,7 @@ model Track {
   id      Int      @id @default(autoincrement())
   userId  Int
   name    String
+  vehicle Vehicle
   posts   Post[]
   travels Travel[]
   user    User     @relation(fields: [userId], references: [id])
@@ -75,6 +95,7 @@ model Travel {
   maxSpeed     Float
   averageSpeed Float
   distance     Float
+  vehicle      Vehicle
   Track        Track?    @relation(fields: [trackId], references: [id], onDelete: SetNull)
   User         User     @relation(fields: [userId], references: [id])
 }

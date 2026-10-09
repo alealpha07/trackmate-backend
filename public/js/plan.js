@@ -397,9 +397,10 @@ async function plan() {
     showStatus(t("plan.planning"));
     const [start, ...rest] = rows.map((row) => ({ lat: row.point.lat, lng: row.point.lng }));
     const end = rest.pop();
+    const options = selectedOptions();
     try {
         let route = null;
-        await apiStream("POST", "/route/plan", { start, via: rest, end, ...selectedOptions() }, {
+        await apiStream("POST", "/route/plan", { start, via: rest, end, ...options }, {
             signal: planController.signal,
             onMessage: (message) => {
                 if (sequence !== planSequence) return;
@@ -414,7 +415,8 @@ async function plan() {
         });
         if (sequence !== planSequence) return;
         if (!route) throw new Error(t("error.generic"));
-        showRoute(route);
+        // A saved track is for the vehicle it was planned with
+        showRoute({ ...route, vehicle: options.vehicle });
     } catch (err) {
         if (sequence !== planSequence || err.name === "AbortError") return;
         if (err.status === 401) return location.replace("/login");
@@ -647,10 +649,19 @@ document.getElementById("reverse").addEventListener("click", () => {
     routeChanged();
 });
 
+/** Only the vehicles our planner can route. */
+async function loadVehicles() {
+    const select = document.getElementById("vehicle");
+    const vehicles = (await api("GET", "/vehicle")).filter((vehicle) => vehicle.plannable);
+    select.replaceChildren(...vehicles.map((vehicle) => new Option(t(`vehicle.${vehicle.id}`), vehicle.id)));
+    updateFilterGroups();
+}
+
 planButton.addEventListener("click", plan);
 document.querySelectorAll("input[name=policy], #vehicle").forEach((el) => el.addEventListener("change", updateFilterGroups));
 document.querySelectorAll("input[name=policy], .filters input, #vehicle").forEach((el) => el.addEventListener("change", routeChanged));
 updateFilterGroups();
+loadVehicles().catch((err) => showStatus(err.message, true));
 
 saveButton.addEventListener("click", async () => {
     if (!currentRoute) return;
@@ -660,7 +671,7 @@ saveButton.addEventListener("click", async () => {
     saveButton.disabled = true;
     let trackId = null;
     try {
-        trackId = (await api("POST", "/track", { name })).id;
+        trackId = (await api("POST", "/track", { name, vehicle: currentRoute.vehicle })).id;
         const form = new FormData();
         // The track file keeps the app's format: legs are only for this page
         const { track, distance, duration } = currentRoute;
