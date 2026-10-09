@@ -1,6 +1,7 @@
 // #region imports
 import express from "express";
 import session from "express-session";
+import { PrismaSessionStore } from "@quixo3/prisma-session-store";
 import cors from "cors";
 import passport from "passport";
 import cookieParser from "cookie-parser";
@@ -11,6 +12,7 @@ import i18n from "i18n";
 import path from "path";
 import fs from "fs";
 import initCronJob from "./cornjob";
+import { prisma } from "./utils";
 // #endregion 
 
 // #region inizialization
@@ -43,10 +45,15 @@ app.use(i18n.init);
 app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
+// Logins last 30 days from the last request, also across server restarts and browser restarts
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 app.use(session({
     secret: SESSION_SECRET,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    rolling: true,
+    cookie: { maxAge: SESSION_MAX_AGE_MS },
+    store: new PrismaSessionStore(prisma, { checkPeriod: 60 * 60 * 1000 }),
 }));
 app.use(cookieParser(COOKIE_SECRET));
 app.use(passport.initialize());

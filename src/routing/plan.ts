@@ -4,8 +4,8 @@ import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
 import { markSnappable } from "./components";
 import { loadDemTiles, loadElevation } from "./elevation";
 import { buildAdjacency, dijkstra } from "./dijkstra";
-import { Policy, edgeCost, edgePenalty } from "./edgeWeight";
-import { RouteFilters, edgeFilter } from "./filters";
+import { Policy, edgeCost, edgePenalties } from "./edgeWeight";
+import { RouteFilters } from "./filters";
 import { nearestNode } from "./nearestNode";
 import { loadTiles } from "./tileCache";
 import { GraphEdge, LatLng, PlannedRoute, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types";
@@ -41,7 +41,7 @@ async function cachedGraph(key: string, build: () => Promise<CachedGraph>): Prom
     return entry;
 }
 
-type SoftStats = Pick<RouteStats, "offBikeways" | "highStress">;
+type SoftStats = Pick<RouteStats, "offBikeways" | "highStress" | "unpaved">;
 
 function stats(distance: number, risk: number, soft: SoftStats): RouteStats {
     return { distance, duration: distance / (DISPLAY_CYCLING_SPEED_KMH / 3.6), risk, ...soft };
@@ -53,6 +53,7 @@ function softStats(edges: GraphEdge[], filters: RouteFilters): SoftStats {
     const soft: SoftStats = {};
     if (filters.cyclewaysOnly) soft.offBikeways = length((e) => !e.bikeway);
     if (filters.avoidLts4) soft.highStress = length((e) => e.lts === 4);
+    if (filters.avoidUnpaved) soft.unpaved = length((e) => e.unpaved);
     return soft;
 }
 
@@ -63,17 +64,6 @@ function latLng(graph: RoutingGraph, id: string): LatLng {
 export interface PlanOptions {
     policy: Policy;
     filters: RouteFilters;
-}
-
-/** Points snap to these, so a route never starts on a road the filters exclude. */
-function usableNodes(graph: RoutingGraph, allowed: (edge: GraphEdge) => boolean): Set<string> {
-    const nodes = new Set<string>();
-    for (const edge of graph.edges) {
-        if (!allowed(edge)) continue;
-        nodes.add(String(edge.from));
-        nodes.add(String(edge.to));
-    }
-    return nodes;
 }
 
 /** Each leg (start, stops, destination) gets its own box and graph, and the legs are joined end to
@@ -89,8 +79,7 @@ export async function planRoute(
     const boxes = points.slice(1).map((end, i) => planningBBox(points[i], end));
     const [legTiles] = await Promise.all([loadTiles(boxes, signal, onProgress), ...boxes.map((box) => loadDemTiles(box, signal))]);
     const cost = edgeCost(options.policy);
-    const penalty = edgePenalty(options.filters, cost);
-    const allowed = edgeFilter(options.filters);
+    const penalties = edgePenalties(options.filters, cost);
 
     const track: TrackPoint[] = [];
     const legs: RouteLeg[] = [];
@@ -111,14 +100,12 @@ export async function planRoute(
             return { graph, adjacency };
         });
 
-        const usable = allowed && usableNodes(graph, allowed);
         // Legs join exactly at the stop
-        const continues = joint !== null && graph.nodes[joint] && (!usable || usable.has(joint));
-        const startId = continues ? joint : nearestNode(graph, points[i].lat, points[i].lng, usable);
-        const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng, usable);
+        const startId = joint !== null && graph.nodes[joint] ? joint : nearestNode(graph, points[i].lat, points[i].lng);
+        const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng);
         if (!startId || !endId) return { unreachableLeg: i };
 
-        const result = dijkstra(adjacency, startId, endId, cost, allowed, penalty);
+        const result = dijkstra(adjacency, startId, endId, cost, penalties);
         if (!result) return { unreachableLeg: i };
 
         // The joint node is already the last point of the track

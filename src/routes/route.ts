@@ -4,7 +4,7 @@ import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
 import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES, VEHICLES } from "../routing/config";
 import { Policy } from "../routing/edgeWeight";
-import { RouteFilters, edgeFilter } from "../routing/filters";
+import { RouteFilters } from "../routing/filters";
 import { planRoute } from "../routing/plan";
 import { PartialDownloadError } from "../routing/tileCache";
 import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
@@ -123,9 +123,7 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
         }
         if ("unreachableLeg" in planned) {
             const leg = legName(response, planned.unreachableLeg, route.length);
-            // With hard filters on, the usual cause is a gap in the allowed roads
-            const filtered = edgeFilter(filters) !== null;
-            return fail(422, response.__(filtered ? "route.errors.no-route-filters" : "route.errors.no-route-leg", leg));
+            return fail(422, response.__("route.errors.no-route-leg", leg));
         }
 
         if (stream) response.end(JSON.stringify({ route: planned }) + "\n");

@@ -34,8 +34,11 @@ const MAP_STYLES = [
     { id: "alidade_smooth_dark", label: "plan.styleDark" },
 ];
 const MAP_STYLE_KEY = "trackmate.mapStyle";
-// Inline copy of the app's ic_layers_24
+// Inline copies of the app's ic_layers_24, ic_my_location_24 and ic_compass_needle_24
 const LAYERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>';
+const LOCATION_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>';
+const COMPASS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="north" d="M12 2.5 15.5 12h-7z"/><path class="south" d="M12 21.5 15.5 12h-7z"/><circle class="pivot" cx="12" cy="12" r="1.3"/></svg>';
+const LOCATION_ZOOM = 16; // as the app's location button
 
 /** Only a convenience: storage may be unavailable. */
 function savedMapStyle() {
@@ -86,7 +89,38 @@ const map = new maplibregl.Map({
         ],
     },
 });
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+/** One round map button, like the app's mini FABs. */
+class ButtonControl {
+    constructor(className, label, icon, onClick) {
+        this.container = document.createElement("div");
+        this.container.className = `maplibregl-ctrl maplibregl-ctrl-group ${className}`;
+        this.button = document.createElement("button");
+        this.button.type = "button";
+        this.button.title = label;
+        this.button.setAttribute("aria-label", label);
+        this.button.innerHTML = icon;
+        this.button.addEventListener("click", onClick);
+        this.container.append(this.button);
+    }
+
+    onAdd() {
+        return this.container;
+    }
+
+    onRemove() {}
+}
+
+// Top to bottom as in the app: compass, layers, my location, zoom.
+// The compass shows only while the map is turned (right-drag, or two fingers on a phone) or tilted
+const compass = new ButtonControl("compass", t("plan.north"), COMPASS_ICON, () => map.easeTo({ bearing: 0, pitch: 0 }));
+map.addControl(compass, "top-right");
+function updateCompass() {
+    compass.container.hidden = map.getBearing() === 0 && map.getPitch() === 0;
+    compass.button.firstChild.style.transform = `rotate(${-map.getBearing()}deg)`;
+}
+map.on("rotate", updateCompass);
+map.on("pitch", updateCompass);
+updateCompass();
 
 class LayersControl {
     onAdd() {
@@ -146,6 +180,27 @@ class LayersControl {
     onRemove() {}
 }
 map.addControl(new LayersControl(), "top-right");
+
+const myLocationMarker = new maplibregl.Marker({ element: Object.assign(document.createElement("div"), { className: "my-location" }) });
+
+function showMyLocation(position) {
+    myLocationMarker.setLngLat([position.coords.longitude, position.coords.latitude]).addTo(map);
+}
+
+// Geolocation needs HTTPS or localhost
+if (navigator.geolocation) {
+    map.addControl(new ButtonControl("locate", t("plan.locate"), LOCATION_ICON, () => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                showMyLocation(position);
+                map.flyTo({ center: [position.coords.longitude, position.coords.latitude], zoom: LOCATION_ZOOM });
+            },
+            () => showStatus(t("plan.locationUnavailable"), true),
+            { enableHighAccuracy: true, timeout: 10_000 },
+        );
+    }), "top-right");
+}
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
 // #region state
 // Route points in order: start, stops…, destination. One row per field in the panel:
@@ -387,6 +442,7 @@ function showRoute(route) {
     document.getElementById("duration").textContent = formatDuration(route.duration);
     showSoftStat("off-bikeways", route.offBikeways);
     showSoftStat("high-stress", route.highStress);
+    showSoftStat("unpaved", route.unpaved);
 
     legsList.replaceChildren(...(route.legs.length > 1 ? route.legs : []).map((leg, i) => {
         const li = document.createElement("li");
@@ -625,9 +681,10 @@ document.getElementById("logout").addEventListener("click", async () => {
     location.replace("/login");
 });
 
-// Start defaults to the browser's location (needs HTTPS or localhost)
+// Start defaults to the browser's location
 navigator.geolocation?.getCurrentPosition(
     (position) => {
+        showMyLocation(position);
         if (rows[0].point) return;
         const here = { lat: position.coords.latitude, lng: position.coords.longitude, label: t("plan.myLocation") };
         map.jumpTo({ center: [here.lng, here.lat], zoom: 14 });

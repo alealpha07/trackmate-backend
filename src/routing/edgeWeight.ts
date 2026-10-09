@@ -9,14 +9,14 @@ export function edgeCost(policy: Policy): (edge: GraphEdge) => number {
     return (edge) => edge.distance;
 }
 
-// More than the cost of any whole route, so any high-stress road outweighs every road off cycleways
-const HIGH_STRESS_WEIGHT = 1e8;
-
 /** Soft filters: the roads they avoid are used only where nothing else connects, as little as possible.
- * When a route without them exists, it is the one found. High-stress roads are avoided first. */
-export function edgePenalty(filters: RouteFilters, cost: (edge: GraphEdge) => number): ((edge: GraphEdge) => number) | null {
-    const avoidLts4 = filters.avoidLts4 === true;
-    const cyclewaysOnly = filters.cyclewaysOnly === true;
-    if (!avoidLts4 && !cyclewaysOnly) return null;
-    return (edge) => cost(edge) * ((avoidLts4 && edge.lts === 4 ? HIGH_STRESS_WEIGHT : 0) + (cyclewaysOnly && !edge.bikeway ? 1 : 0));
+ * When a route without them exists, it is the one found. Each penalty is the cost on the roads it avoids,
+ * most important first: high-stress roads, then unpaved roads, then roads off cycleways. So a gravel path is
+ * taken before a fast road, and a paved street without a bike lane before an unpaved cycleway. */
+export function edgePenalties(filters: RouteFilters, cost: (edge: GraphEdge) => number): ((edge: GraphEdge) => number)[] {
+    const penalties: ((edge: GraphEdge) => number)[] = [];
+    if (filters.avoidLts4) penalties.push((edge) => (edge.lts === 4 ? cost(edge) : 0));
+    if (filters.avoidUnpaved) penalties.push((edge) => (edge.unpaved ? cost(edge) : 0));
+    if (filters.cyclewaysOnly) penalties.push((edge) => (edge.bikeway ? 0 : cost(edge)));
+    return penalties;
 }

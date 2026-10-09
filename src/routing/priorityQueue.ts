@@ -1,8 +1,15 @@
 interface HeapEntry<T> {
     value: T;
-    priority: number;
-    /** Orders entries with the same priority. */
-    tie: number;
+    /** Compared element by element: the second orders entries with the same first, and so on. */
+    key: number[];
+}
+
+/** Keys of the same length. */
+export function keyLess(a: number[], b: number[]): boolean {
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return a[i] < b[i];
+    }
+    return false;
 }
 
 export class MinHeap<T> {
@@ -12,8 +19,8 @@ export class MinHeap<T> {
         return this.items.length;
     }
 
-    push(value: T, priority: number, tie = 0): void {
-        this.items.push({ value, priority, tie });
+    push(value: T, key: number[]): void {
+        this.items.push({ value, key });
         this.bubbleUp(this.items.length - 1);
     }
 
@@ -30,9 +37,7 @@ export class MinHeap<T> {
     }
 
     private less(a: number, b: number): boolean {
-        const x = this.items[a];
-        const y = this.items[b];
-        return x.priority < y.priority || (x.priority === y.priority && x.tie < y.tie);
+        return keyLess(this.items[a].key, this.items[b].key);
     }
 
     private bubbleUp(index: number): void {

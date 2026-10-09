@@ -73,8 +73,8 @@
                 <!-- Filter groups show only for their data-vehicle and data-policy -->
                 <fieldset class="filters" data-vehicle="bicycle" data-policy="safest">
                     <legend data-i18n="plan.safetyFilters"></legend>
-                    <label class="toggle" data-i18n-title="plan.cyclewaysOnlyHint"><input type="checkbox" name="cyclewaysOnly"><span data-i18n="plan.cyclewaysOnly"></span></label>
-                    <label class="toggle" data-i18n-title="plan.avoidLts4Hint"><input type="checkbox" name="avoidLts4"><span data-i18n="plan.avoidLts4"></span></label>
+                    <label class="toggle" data-i18n-title="plan.cyclewaysOnlyHint"><input type="checkbox" name="cyclewaysOnly" checked><span data-i18n="plan.cyclewaysOnly"></span></label>
+                    <label class="toggle" data-i18n-title="plan.avoidLts4Hint"><input type="checkbox" name="avoidLts4" checked><span data-i18n="plan.avoidLts4"></span></label>
                 </fieldset>
 
                 <fieldset class="filters" data-vehicle="bicycle">
@@ -92,6 +92,7 @@
                     <div><dt data-i18n="plan.duration"></dt><dd id="duration"></dd></div>
                     <div id="off-bikeways-item" hidden><dt data-i18n="plan.offBikeways" data-i18n-title="plan.offBikewaysHint"></dt><dd id="off-bikeways"></dd></div>
                     <div id="high-stress-item" hidden><dt data-i18n="plan.highStress" data-i18n-title="plan.highStressHint"></dt><dd id="high-stress"></dd></div>
+                    <div id="unpaved-item" hidden><dt data-i18n="plan.unpaved" data-i18n-title="plan.unpavedHint"></dt><dd id="unpaved"></dd></div>
                 </dl>
                 <ol id="legs" class="legs" hidden></ol>
                 <button id="save" class="button secondary" type="button" data-i18n="plan.save"></button>

@@ -87,6 +87,8 @@ export interface RouteStats {
     offBikeways?: number;
     /** Meters at LTS 4, only with "Avoid high-stress roads" on. */
     highStress?: number;
+    /** Meters on unpaved roads, only with "Avoid unpaved" on. */
+    unpaved?: number;
 }
 
 /** One part of a route, between two consecutive points (start, stops, destination). */
