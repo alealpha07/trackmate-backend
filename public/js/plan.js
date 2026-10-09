@@ -24,7 +24,7 @@ const EARTH_RADIUS_METERS = 6_371_008.8;
 const ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> '
     + '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
     + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
-const DEM_ATTRIBUTION = "Routes produced using Copernicus WorldDEM-30 &copy; DLR e.V. 2010-2014 and &copy; Airbus Defence and Space GmbH 2014-2018 "
+const DEM_ATTRIBUTION = "Elevation data produced using Copernicus WorldDEM-30 &copy; DLR e.V. 2010-2014 and &copy; Airbus Defence and Space GmbH 2014-2018 "
     + "provided under COPERNICUS by the European Union and ESA; all rights reserved";
 // The first one is the default
 const MAP_STYLES = [
