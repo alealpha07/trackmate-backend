@@ -84,6 +84,8 @@ export interface RouteStats {
     offBikeways?: number;
     // meters at LTS 4
     highStress?: number;
+    // meters unpaved
+    unpaved?: number;
 }
 
 export interface RouteLeg extends RouteStats {

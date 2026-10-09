@@ -87,7 +87,6 @@
 			"filters": "Filtri del percorso non supportati!",
 			"leg-too-far": "Il tratto %s è di %s km in linea d'aria: tra due punti consecutivi sono ammessi al massimo %s km!",
 			"no-route-leg": "Nessun percorso trovato per il tratto %s!",
-			"no-route-filters": "Nessun percorso trovato per il tratto %s con i filtri scelti: prova a disattivarne qualcuno!",
 			"map-data-partial": "Dati della mappa scaricati solo in parte (%s di %s zone). Ricalcola per continuare lo scaricamento!",
 			"map-data": "Dati della mappa temporaneamente non disponibili, riprova più tardi!",
 			"geocoding": "Ricerca dei luoghi temporaneamente non disponibile, riprova più tardi!",

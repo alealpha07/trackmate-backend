@@ -106,3 +106,10 @@ model Like {
   user   User @relation(fields: [userId], references: [id])
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
+
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt DateTime
+}

@@ -1,5 +1,5 @@
 import { GraphEdge, RoutingGraph } from "./types";
-import { MinHeap } from "./priorityQueue";
+import { MinHeap, keyLess } from "./priorityQueue";
 
 export interface RouteResult {
     nodeIds: string[];
@@ -26,15 +26,13 @@ export function dijkstra(
     startId: string,
     endId: string,
     cost: (edge: GraphEdge) => number,
-    allowed: ((edge: GraphEdge) => boolean) | null = null,
-    penalty: ((edge: GraphEdge) => number) | null = null,
+    penalties: ((edge: GraphEdge) => number)[] = [],
 ): RouteResult | null {
-    const dist = new Map<string, number>([[startId, 0]]);
-    const penalties = new Map<string, number>([[startId, 0]]);
+    const keys = new Map<string, number[]>([[startId, new Array(penalties.length + 1).fill(0)]]);
     const prevEdge = new Map<string, GraphEdge>();
     const visited = new Set<string>();
     const heap = new MinHeap<string>();
-    heap.push(startId, 0, 0);
+    heap.push(startId, keys.get(startId)!);
 
     while (heap.size > 0) {
         const current = heap.pop()!;
@@ -42,25 +40,23 @@ export function dijkstra(
         visited.add(current);
         if (current === endId) break;
 
-        const currentDist = dist.get(current)!;
-        const currentPenalty = penalties.get(current)!;
+        const currentKey = keys.get(current)!;
         for (const edge of adjacency.get(current) ?? []) {
             const to = String(edge.to);
-            if (visited.has(to) || (allowed && !allowed(edge))) continue;
+            if (visited.has(to)) continue;
 
-            const candidate = currentDist + cost(edge);
-            const candidatePenalty = penalty ? currentPenalty + penalty(edge) : 0;
-            const known = penalties.get(to) ?? Infinity;
-            if (candidatePenalty < known || (candidatePenalty === known && candidate < dist.get(to)!)) {
-                dist.set(to, candidate);
-                penalties.set(to, candidatePenalty);
+            const candidate = penalties.map((penalty, i) => currentKey[i] + penalty(edge));
+            candidate.push(currentKey[penalties.length] + cost(edge));
+            const known = keys.get(to);
+            if (!known || keyLess(candidate, known)) {
+                keys.set(to, candidate);
                 prevEdge.set(to, edge);
-                heap.push(to, candidatePenalty, candidate);
+                heap.push(to, candidate);
             }
         }
     }
 
-    if (!dist.has(endId)) return null;
+    if (!keys.has(endId)) return null;
 
     const edges: GraphEdge[] = [];
     const nodeIds: string[] = [endId];
@@ -78,7 +74,7 @@ export function dijkstra(
     return {
         nodeIds,
         edges,
-        totalCost: dist.get(endId)!,
+        totalCost: keys.get(endId)![penalties.length],
         totalDistanceMeters: edges.reduce((sum, e) => sum + e.distance, 0),
         totalRisk: edges.reduce((sum, e) => sum + e.distance * e.risk, 0),
     };

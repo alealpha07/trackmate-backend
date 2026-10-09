@@ -9,13 +9,11 @@ export function edgeCost(policy: Policy): (edge: GraphEdge) => number {
     return (edge) => edge.distance;
 }
 
-// more than any whole route costs
-const HIGH_STRESS_WEIGHT = 1e8;
-
 // soft filters, most important first: high stress, unpaved, off cycleways
-export function edgePenalty(filters: RouteFilters, cost: (edge: GraphEdge) => number): ((edge: GraphEdge) => number) | null {
-    const avoidLts4 = filters.avoidLts4 === true;
-    const cyclewaysOnly = filters.cyclewaysOnly === true;
-    if (!avoidLts4 && !cyclewaysOnly) return null;
-    return (edge) => cost(edge) * ((avoidLts4 && edge.lts === 4 ? HIGH_STRESS_WEIGHT : 0) + (cyclewaysOnly && !edge.bikeway ? 1 : 0));
+export function edgePenalties(filters: RouteFilters, cost: (edge: GraphEdge) => number): ((edge: GraphEdge) => number)[] {
+    const penalties: ((edge: GraphEdge) => number)[] = [];
+    if (filters.avoidLts4) penalties.push((edge) => (edge.lts === 4 ? cost(edge) : 0));
+    if (filters.avoidUnpaved) penalties.push((edge) => (edge.unpaved ? cost(edge) : 0));
+    if (filters.cyclewaysOnly) penalties.push((edge) => (edge.bikeway ? 0 : cost(edge)));
+    return penalties;
 }
