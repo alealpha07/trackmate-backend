@@ -18,12 +18,12 @@ const SEARCH_DEBOUNCE_MS = 300;
 const MAX_LEG_METERS = 50_000;
 const EARTH_RADIUS_METERS = 6_371_008.8;
 
-// no api key needed, stadia uses domain auth
-const ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> '
-    + '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
-    + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
-const DEM_ATTRIBUTION = "Elevation data produced using Copernicus WorldDEM-30 &copy; DLR e.V. 2010-2014 and &copy; Airbus Defence and Space GmbH 2014-2018 "
-    + "provided under COPERNICUS by the European Union and ESA; all rights reserved";
+// stadia's credit is its own control so it never folds, the rest is on /credits
+const ATTRIBUTION = '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
+    + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> '
+    + `| <a href="/credits" target="_blank">${t("plan.credits")}</a>`;
+// osm allows a folded credit if it starts open and folds on the first touch or after a few seconds
+const ATTRIBUTION_COLLAPSE_MS = 5000;
 const MAP_STYLES = [
     { id: "outdoors", label: "plan.styleOutdoors" },
     { id: "osm_bright", label: "plan.styleStreets" },
@@ -64,8 +64,7 @@ const map = new maplibregl.Map({
         version: 8,
         sources: {
             basemap: { type: "raster", tiles: tileUrls(savedMapStyle()), tileSize: 256, maxzoom: 20, attribution: ATTRIBUTION },
-            // required by the copernicus licence
-            route: { type: "geojson", data: { type: "FeatureCollection", features: [] }, attribution: DEM_ATTRIBUTION },
+            route: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
             connectors: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
         },
         layers: [
@@ -194,6 +193,32 @@ if (navigator.geolocation) {
     }), "top-right");
 }
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+// no api key needed, stadia uses domain auth
+class StadiaCredit {
+    onAdd() {
+        const container = document.createElement("div");
+        container.className = "maplibregl-ctrl stadia-credit";
+        container.innerHTML = '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a>';
+        return container;
+    }
+
+    onRemove() {}
+}
+map.addControl(new StadiaCredit(), "bottom-right");
+
+// maplibre only folds the credit on drag
+function collapseAttribution() {
+    clearTimeout(collapseTimer);
+    map.getCanvasContainer().removeEventListener("pointerdown", collapseAttribution);
+    document.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button")?.click();
+}
+const collapseTimer = setTimeout(collapseAttribution, ATTRIBUTION_COLLAPSE_MS);
+map.getCanvasContainer().addEventListener("pointerdown", collapseAttribution);
+
+// on phones the panel is a bottom sheet, the credits ride on top of it
+const panel = document.querySelector(".panel");
+new ResizeObserver(() => document.documentElement.style.setProperty("--panel-height", `${panel.offsetHeight}px`)).observe(panel);
 
 // #region state
 const rows = [];

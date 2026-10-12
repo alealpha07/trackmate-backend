@@ -35,6 +35,13 @@ html, body { height: 100%; overflow: hidden; }
     width: 40px; height: 40px; border: 0; border-radius: 50%; background-color: #fff; box-shadow: var(--shadow-raised); }
 .maplibregl-ctrl-top-right .maplibregl-ctrl-group button:not(:disabled):hover { background-color: #eeeeee; }
 .maplibregl-ctrl-top-right .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* stadia's credit sits next to the folding one */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib, .stadia-credit { clear: none; }
+.maplibregl-ctrl-bottom-right .stadia-credit { margin-top: 10px; }
+.stadia-credit { min-height: 20px; padding: 2px 8px; border-radius: 12px; background: #fff; color: rgba(0, 0, 0, .75);
+                 font: 12px/20px var(--font); }
+.stadia-credit a { color: inherit; text-decoration: none; }
+.stadia-credit a:hover { text-decoration: underline; }
 .compass svg, .locate svg { width: 22px; height: 22px; }
 .locate svg { fill: #212121; }
 .compass .north { fill: var(--map-accent); }
@@ -103,4 +110,5 @@ legend { margin: 0 0 6px; padding: 0; color: var(--muted); font-size: .8rem; }
     .panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 60%;
              border-radius: var(--radius) var(--radius) 0 0; }
     .panel-body { gap: 14px; }
+    .maplibregl-ctrl-bottom-right { bottom: var(--panel-height, 0px); }
 }
