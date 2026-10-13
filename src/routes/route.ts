@@ -32,6 +32,12 @@ function parseFilters(value: any): RouteFilters | null {
     return filters;
 }
 
+function parseMaxDetour(value: any): number | null | undefined {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 1 || value > 1000) return undefined;
+    return value;
+}
+
 function pointName(response: Response, index: number, count: number): string {
     if (index === 0) return response.__("route.points.start");
     if (index === count - 1) return response.__("route.points.end");
@@ -75,6 +81,10 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
         if (!filters) {
             return response.status(422).send(response.__("route.errors.filters"));
         }
+        const maxDetour = parseMaxDetour(request.body.maxDetour);
+        if (maxDetour === undefined) {
+            return response.status(422).send(response.__("route.errors.max-detour"));
+        }
         // Per leg, no total
         for (let i = 0; i < route.length - 1; i++) {
             const meters = haversineMeters(route[i].lat, route[i].lng, route[i + 1].lat, route[i + 1].lng);
@@ -110,7 +120,7 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
 
         let planned;
         try {
-            planned = await planRoute(route, { policy: sanitizedParams.policy as Policy, filters }, controller.signal, onProgress);
+            planned = await planRoute(route, { policy: sanitizedParams.policy as Policy, filters, maxDetour }, controller.signal, onProgress);
         } catch (error) {
             if ((error as Error).name === "AbortError") return;
             console.error(`Route planning failed: ${(error as Error).message}`);

@@ -1,5 +1,6 @@
 import { nodeExtent, planningBBox } from "./bbox";
 import { buildGraph } from "./buildGraph";
+import { capDetour } from "./cappedRoute";
 import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
 import { markSnappable } from "./components";
 import { loadDemTiles, loadElevation } from "./elevation";
@@ -63,6 +64,7 @@ function latLng(graph: RoutingGraph, id: string): LatLng {
 export interface PlanOptions {
     policy: Policy;
     filters: RouteFilters;
+    maxDetour?: number | null;
 }
 
 // each leg gets its own graph, legs are joined end to end
@@ -100,8 +102,11 @@ export async function planRoute(
         const endId = nearestNode(graph, points[i + 1].lat, points[i + 1].lng);
         if (!startId || !endId) return { unreachableLeg: i };
 
-        const result = dijkstra(adjacency, startId, endId, cost, penalties);
+        let result = dijkstra(adjacency, startId, endId, cost, penalties);
         if (!result) return { unreachableLeg: i };
+        if (options.policy === "safest" && options.maxDetour != null) {
+            result = capDetour(graph, adjacency, startId, endId, cost, penalties, options.maxDetour, result);
+        }
 
         const nodeIds = result.nodeIds[0] === joint ? result.nodeIds.slice(1) : result.nodeIds;
         for (const id of nodeIds) {

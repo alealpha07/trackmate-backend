@@ -84,6 +84,10 @@ legend { margin: 0 0 6px; padding: 0; color: var(--muted); font-size: .8rem; }
 .toggle { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--text); font-size: .95rem; }
 .toggle input { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--primary); }
 .toggle:has(input:disabled) { opacity: .5; }
+.detour { display: grid; gap: 4px; margin: 0; color: var(--text); font-size: .95rem; }
+.detour-head { display: flex; justify-content: space-between; gap: 12px; }
+.detour output { color: var(--muted); }
+.detour input { width: 100%; margin: 0; accent-color: var(--primary); }
 
 .plan-button { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .spinner { display: none; width: 18px; height: 18px; border: 2.5px solid currentColor; border-right-color: transparent;

@@ -17,6 +17,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 // same limit as the server
 const MAX_LEG_METERS = 50_000;
 const EARTH_RADIUS_METERS = 6_371_008.8;
+// percent over the shortest route, null for no limit
+const MAX_DETOUR_STOPS = [10, 15, 25, 50, null];
 
 // stadia's credit is its own control so it never folds, the rest is on /credits
 const ATTRIBUTION = '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
@@ -387,14 +389,26 @@ function updateFilterGroups() {
     });
 }
 
+function maxDetour() {
+    const slider = document.querySelector("input[name=maxDetour]");
+    return slider.closest(".filters").hidden ? null : MAX_DETOUR_STOPS[Number(slider.value)];
+}
+
+function showMaxDetour() {
+    const value = MAX_DETOUR_STOPS[Number(document.querySelector("input[name=maxDetour]").value)];
+    document.getElementById("max-detour-value").textContent = value === null ? t("plan.noLimit") : `${value}%`;
+}
+
 function selectedOptions() {
     const filters = {};
-    document.querySelectorAll(".filters:not([hidden]) input").forEach((input) => (filters[input.name] = input.checked));
-    return {
+    document.querySelectorAll(".filters:not([hidden]) input[type=checkbox]").forEach((input) => (filters[input.name] = input.checked));
+    const options = {
         vehicle: document.getElementById("vehicle").value,
         policy: document.querySelector("input[name=policy]:checked").value,
         filters,
     };
+    if (maxDetour() !== null) options.maxDetour = maxDetour();
+    return options;
 }
 
 async function plan() {
@@ -661,7 +675,9 @@ async function loadVehicles() {
 planButton.addEventListener("click", plan);
 document.querySelectorAll("input[name=policy], #vehicle").forEach((el) => el.addEventListener("change", updateFilterGroups));
 document.querySelectorAll("input[name=policy], .filters input, #vehicle").forEach((el) => el.addEventListener("change", routeChanged));
+document.querySelector("input[name=maxDetour]").addEventListener("input", showMaxDetour);
 updateFilterGroups();
+showMaxDetour();
 loadVehicles().catch((err) => showStatus(err.message, true));
 
 saveButton.addEventListener("click", async () => {

@@ -95,6 +95,7 @@
 			"vehicle": "Unsupported vehicle!",
 			"policy": "Unsupported routing policy!",
 			"filters": "Unsupported route filters!",
+			"max-detour": "The maximum extra length must be a percentage between 1 and 1000!",
 			"leg-too-far": "The leg %s is %s km in a straight line: at most %s km are allowed between consecutive points!",
 			"no-route-leg": "No route found for the leg %s!",
 			"map-data-partial": "Map data only partly downloaded (%s of %s areas). Plan again to continue the download!",
