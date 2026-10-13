@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
 import cron from "node-cron";
-import { DEM_CACHE_DIR, DEM_CACHE_MAX_MB, DEM_CACHE_TTL_DAYS, OSM_CACHE_DIR, OSM_CACHE_MAX_MB, OSM_CACHE_TTL_DAYS } from "./config";
+import {
+    DEM_CACHE_DIR, DEM_CACHE_MAX_MB, DEM_CACHE_TTL_DAYS, INSTRUCTIONS_CACHE_DIR, INSTRUCTIONS_CACHE_MAX_MB,
+    INSTRUCTIONS_CACHE_TTL_DAYS, OSM_CACHE_DIR, OSM_CACHE_MAX_MB, OSM_CACHE_TTL_DAYS,
+} from "./config";
 
 export interface DiskCache {
     dir: string;
@@ -16,6 +19,9 @@ export const OSM_CACHE: DiskCache = {
 };
 export const DEM_CACHE: DiskCache = {
     dir: DEM_CACHE_DIR, ttlMs: DEM_CACHE_TTL_DAYS * DAY_MS, maxBytes: DEM_CACHE_MAX_MB * 1024 * 1024,
+};
+export const INSTRUCTIONS_CACHE: DiskCache = {
+    dir: INSTRUCTIONS_CACHE_DIR, ttlMs: INSTRUCTIONS_CACHE_TTL_DAYS * DAY_MS, maxBytes: INSTRUCTIONS_CACHE_MAX_MB * 1024 * 1024,
 };
 
 export function isFresh(cache: DiskCache, file: string): boolean {
@@ -93,7 +99,7 @@ export function pruneSoon(cache: DiskCache) {
 }
 
 export function scheduleCachePruning() {
-    const pruneAll = () => [OSM_CACHE, DEM_CACHE].forEach(pruneCache);
+    const pruneAll = () => [OSM_CACHE, DEM_CACHE, INSTRUCTIONS_CACHE].forEach(pruneCache);
     setImmediate(pruneAll);
     cron.schedule("30 3 * * *", pruneAll);
 }

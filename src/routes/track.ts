@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
 import { User, Vehicle } from "@prisma/client";
 import { sanitizeParams, prisma, isAuthenticated, UPLOAD_DIR } from "../utils";
-import { parseVehicle, vehicleClass, vehicleId } from "../vehicles";
+import { parseVehicle, vehicleClass, vehicleCosting, vehicleId } from "../vehicles";
+import { InstructionsError, trackInstructions, trackPoints, valhallaLanguage } from "../routing/instructions";
 import multer from "multer"
 import path from "path"
 import fs from "fs";
@@ -82,6 +83,70 @@ router.get("/file", isAuthenticated, async (req: Request, res: Response): Promis
         res.status(500).send(res.__("server.error"));
     }
 });
+
+// Turn-by-turn instructions
+router.get("/instructions", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+    try {
+        const requiredParams = ["id"];
+        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.query);
+        if (missingParams.length > 0) {
+            return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+
+        const track = await prisma.track.findUnique({ where: { id: parseInt(sanitizedParams.id) || 0 } });
+        if (!track) {
+            return response.status(404).send(response.__("track.errors.missing"));
+        }
+        let vehicle = track.vehicle;
+        if (request.query.vehicle !== undefined) {
+            const requested = parseVehicle(request.query.vehicle);
+            if (!requested) {
+                return response.status(422).send(response.__("track.errors.vehicle"));
+            }
+            if (vehicleClass(requested) !== vehicleClass(track.vehicle)) {
+                return response.status(422).send(response.__("track.errors.vehicle-class"));
+            }
+            vehicle = requested;
+        }
+
+        const filePath = path.join(FINAL_UPLOAD_DIR, `${track.id}.json`);
+        let points;
+        try {
+            points = trackPoints(JSON.parse(await fs.promises.readFile(filePath, "utf-8")));
+        } catch {
+            points = null;
+        }
+        if (!points) {
+            return response.status(404).send(response.__("file.errors.missing"));
+        }
+
+        const language = valhallaLanguage(request.query.lang);
+        try {
+            const instructions = await trackInstructions({
+                trackId: track.id,
+                points,
+                costing: vehicleCosting(vehicle),
+                language,
+                speedLimits: vehicleClass(vehicle) === "motor",
+            });
+            response.json({ vehicle: vehicleId(vehicle), language, ...instructions });
+        } catch (error) {
+            if (!(error instanceof InstructionsError)) throw error;
+            console.error(`Track ${track.id}: ${error.message}`);
+            const failure = {
+                "no-match": [422, "route.errors.instructions-no-match"],
+                "too-long": [422, "route.errors.instructions-too-long"],
+                timeout: [504, "route.errors.instructions-timeout"],
+                unavailable: [502, "route.errors.instructions"],
+            } as const;
+            const [status, message] = failure[error.kind];
+            response.status(status).send(response.__(message));
+        }
+    } catch (error) {
+        response.status(500).send(response.__("server.error"));
+        console.error(error);
+    }
+})
 
 // Create Track
 router.post("/", isAuthenticated, async (request: Request, response: Response): Promise<any> => {

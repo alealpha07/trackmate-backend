@@ -48,6 +48,7 @@ function savedMapStyle() {
 
 function tileUrls(style) {
     const retina = devicePixelRatio > 1 ? "@2x" : "";
+    // no api key needed, stadia uses domain auth
     return [`https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/{y}${retina}.png`];
 }
 
@@ -194,7 +195,6 @@ if (navigator.geolocation) {
 }
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-// no api key needed, stadia uses domain auth
 class StadiaCredit {
     onAdd() {
         const container = document.createElement("div");

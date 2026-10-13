@@ -101,7 +101,11 @@
 			"map-data": "Map data is temporarily unavailable, try again later!",
 			"geocoding": "Place search is temporarily unavailable, try again later!",
 			"geocoding-disabled": "Place search is not configured on this server!",
-			"geocoding-limit": "Too many searches, wait a minute and try again!"
+			"geocoding-limit": "Too many searches, wait a minute and try again!",
+			"instructions": "Turn-by-turn instructions are temporarily unavailable, try again later!",
+			"instructions-timeout": "Turn-by-turn instructions took too long, try again later!",
+			"instructions-no-match": "This track doesn't follow known roads closely enough for turn-by-turn instructions!",
+			"instructions-too-long": "This track is too long for turn-by-turn instructions!"
 		},
 		"points": {
 			"start": "start",

@@ -35,7 +35,6 @@ html, body { height: 100%; overflow: hidden; }
     width: 40px; height: 40px; border: 0; border-radius: 50%; background-color: #fff; box-shadow: var(--shadow-raised); }
 .maplibregl-ctrl-top-right .maplibregl-ctrl-group button:not(:disabled):hover { background-color: #eeeeee; }
 .maplibregl-ctrl-top-right .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-/* stadia's credit sits next to the folding one */
 .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib, .stadia-credit { clear: none; }
 .maplibregl-ctrl-bottom-right .stadia-credit { margin-top: 10px; }
 .stadia-credit { min-height: 20px; padding: 2px 8px; border-radius: 12px; background: #fff; color: rgba(0, 0, 0, .75);

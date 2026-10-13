@@ -50,6 +50,12 @@ export const DEM_CACHE_DIR = process.env.DEM_CACHE_DIR || path.join(__dirname, "
 // Italy is about 45 tiles, 1.8 GB
 export const DEM_CACHE_TTL_DAYS = Number(process.env.DEM_CACHE_TTL_DAYS) || 365;
 export const DEM_CACHE_MAX_MB = Number(process.env.DEM_CACHE_MAX_MB) || 2048;
+export const VALHALLA_URL = (process.env.VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/+$/, "");
+// FOSSGIS wants the app and a contact in the User-Agent
+export const VALHALLA_USER_AGENT = "trackmate-backend/1.0 (turn-by-turn instructions, alealphatv@gmail.com)";
+export const INSTRUCTIONS_CACHE_DIR = process.env.INSTRUCTIONS_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "instructions");
+export const INSTRUCTIONS_CACHE_TTL_DAYS = Number(process.env.INSTRUCTIONS_CACHE_TTL_DAYS) || 30;
+export const INSTRUCTIONS_CACHE_MAX_MB = Number(process.env.INSTRUCTIONS_CACHE_MAX_MB) || 256;
 // a 30 m grid is too coarse for short edges
 export const GRADE_WINDOW_METERS = 200;
 // ground filter radius in pixels, removes roofs and trees from the elevation
