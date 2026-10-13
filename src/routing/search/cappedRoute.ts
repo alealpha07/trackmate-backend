@@ -1,7 +1,7 @@
-import { RouteResult, dijkstra } from "./dijkstra";
-import { haversineMeters } from "./haversine";
+import { dijkstra } from "./dijkstra";
+import { haversineMeters } from "../haversine";
 import { MinHeap, keyLess } from "./priorityQueue";
-import { GraphEdge, RoutingGraph } from "./types";
+import { GraphEdge, RouteResult, RoutingGraph } from "../types";
 
 type Weight = (edge: GraphEdge) => number;
 

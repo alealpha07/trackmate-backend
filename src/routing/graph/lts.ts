@@ -1,7 +1,5 @@
-import { BikeInfra, Direction, PATH_HIGHWAYS, Tags, carDirection, lanesPerDirection, maxspeedKmh, totalLanes } from "./osmTags";
-
-// level of traffic stress, 1 to 4
-export type Lts = 1 | 2 | 3 | 4;
+import { PATH_HIGHWAYS, carDirection, lanesPerDirection, maxspeedKmh, totalLanes } from "./osmTags";
+import { BikeInfra, Direction, Lts, Tags } from "../types";
 
 // the criteria use mph steps
 function speedMph(tags: Tags, direction: Direction): number {

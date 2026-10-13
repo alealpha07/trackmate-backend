@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 import i18n from "i18n";
 import path from "path";
 import fs from "fs";
-import initCronJob from "./cornjob";
+import initCronJob from "./cronJob";
 import { prisma } from "./utils";
 // #endregion 
 
@@ -96,7 +96,7 @@ app.use("/", share);
 // initializing cron job for quests
 initCronJob();
 // imported after dotenv
-import { scheduleCachePruning } from "./routing/diskCache";
+import { scheduleCachePruning } from "./routing/data/diskCache";
 scheduleCachePruning();
 
 app.listen(PORT, () => {

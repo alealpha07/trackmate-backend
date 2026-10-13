@@ -1,14 +1,15 @@
-import { nodeExtent } from "./bbox";
-import { DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "./config";
-import { Elevation } from "./elevation";
-import { haversineMeters } from "./haversine";
+import { nodeExtent } from "../data/bbox";
+import { DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "../config";
+import { haversineMeters } from "../haversine";
 import { levelOfTrafficStress } from "./lts";
 import {
-    Direction, DrivingSide, Tags, bicycleAllowed, bicycleDirection, bikeInfra, drivingSide, drivingSideIn, hasConstruction,
+    bicycleAllowed, bicycleDirection, bikeInfra, drivingSide, drivingSideIn, hasConstruction,
     hasEmbeddedRails, hasParkedCars, isPaved,
 } from "./osmTags";
 import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable";
-import { BBox, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph } from "./types";
+import {
+    BBox, Direction, DrivingSide, Elevation, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph, Tags,
+} from "../types";
 
 // footways only when bikes are allowed, never steps
 function isRoutable(tags: Tags): boolean {

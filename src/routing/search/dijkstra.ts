@@ -1,13 +1,5 @@
-import { GraphEdge, RoutingGraph } from "./types";
+import { GraphEdge, RouteResult, RoutingGraph } from "../types";
 import { MinHeap, keyLess } from "./priorityQueue";
-
-export interface RouteResult {
-    nodeIds: string[];
-    edges: GraphEdge[];
-    totalCost: number;
-    totalDistanceMeters: number;
-    totalRisk: number;
-}
 
 export function buildAdjacency(graph: RoutingGraph): Map<string, GraphEdge[]> {
     const adjacency = new Map<string, GraphEdge[]>();

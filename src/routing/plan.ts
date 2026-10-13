@@ -1,15 +1,13 @@
-import { nodeExtent, planningBBox } from "./bbox";
-import { buildGraph } from "./buildGraph";
-import { capDetour } from "./cappedRoute";
+import { nodeExtent, planningBBox } from "./data/bbox";
+import { buildGraph } from "./graph/buildGraph";
+import { capDetour } from "./search/cappedRoute";
 import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
-import { markSnappable } from "./components";
-import { loadDemTiles, loadElevation } from "./elevation";
-import { buildAdjacency, dijkstra } from "./dijkstra";
-import { Policy, edgeCost, edgePenalties } from "./edgeWeight";
-import { RouteFilters } from "./filters";
-import { nearestNode } from "./nearestNode";
-import { loadTiles } from "./tileCache";
-import { GraphEdge, LatLng, PlannedRoute, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types";
+import { markSnappable, nearestNode } from "./graph/snap";
+import { loadDemTiles, loadElevation } from "./data/elevation";
+import { buildAdjacency, dijkstra } from "./search/dijkstra";
+import { edgeCost, edgePenalties } from "./search/edgeWeight";
+import { loadTiles } from "./data/tileCache";
+import { GraphEdge, LatLng, PlannedRoute, Policy, RouteFilters, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types";
 
 interface CachedGraph {
     graph: RoutingGraph;

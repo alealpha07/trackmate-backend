@@ -1,7 +1,4 @@
-import { RouteFilters } from "./filters";
-import { GraphEdge } from "./types";
-
-export type Policy = "safest" | "shortest";
+import { GraphEdge, Policy, RouteFilters } from "../types";
 
 // safest: length times injury risk, shortest: length
 export function edgeCost(policy: Policy): (edge: GraphEdge) => number {

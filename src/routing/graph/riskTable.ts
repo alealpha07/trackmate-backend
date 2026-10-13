@@ -1,20 +1,5 @@
-import { BikeInfra, PATH_HIGHWAYS, Tags } from "./osmTags";
-
-// road types of the injury study the weights come from
-export type RouteType =
-    | "cycle_track"
-    | "local_bike_route"
-    | "local"
-    | "major_lane"
-    | "bike_path"
-    | "major_shared"
-    | "major"
-    | "major_parked_lane"
-    | "major_parked_shared"
-    | "multiuse_unpaved"
-    | "multiuse_paved"
-    | "sidewalk"
-    | "major_parked";
+import { PATH_HIGHWAYS } from "./osmTags";
+import { BikeInfra, RouteType, Tags } from "../types";
 
 // injury risk relative to a major street with parked cars (1.00)
 export const ROUTE_TYPE_OR: Record<RouteType, number> = {

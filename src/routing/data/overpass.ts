@@ -1,5 +1,5 @@
-import { HIGHWAY_WHITELIST, OVERPASS_ENDPOINTS, OVERPASS_TIMEOUT_SECONDS, OVERPASS_USER_AGENT, RAILWAYS } from "./config";
-import { BBox, OverpassElement, OverpassResponse } from "./types";
+import { HIGHWAY_WHITELIST, OVERPASS_ENDPOINTS, OVERPASS_TIMEOUT_SECONDS, OVERPASS_USER_AGENT, RAILWAYS } from "../config";
+import { BBox, OverpassElement, OverpassResponse } from "../types";
 
 function buildQuery(bbox: BBox): string {
     const box = [bbox.south, bbox.west, bbox.north, bbox.east].map((v) => v.toFixed(6)).join(",");

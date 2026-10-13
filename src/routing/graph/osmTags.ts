@@ -1,14 +1,6 @@
 import { driveSide, featuresContaining } from "@rapideditor/country-coder";
-import { DEFAULT_LANES, DEFAULT_MAXSPEED_KMH } from "./config";
-import { BBox } from "./types";
-
-export type Tags = Record<string, string>;
-
-// forward = order of the way's nodes
-export type Direction = "forward" | "backward";
-
-// best first
-export type BikeInfra = "track" | "lane" | "shared" | "none";
+import { DEFAULT_LANES, DEFAULT_MAXSPEED_KMH } from "../config";
+import { BBox, BikeInfra, Direction, DrivingSide, Tags } from "../types";
 
 const INFRA_RANK: Record<BikeInfra, number> = { track: 3, lane: 2, shared: 1, none: 0 };
 
@@ -19,8 +11,6 @@ const BIKE_ALLOWED = ["yes", "designated", "permissive"];
 export function bicycleAllowed(tags: Tags): boolean {
     return BIKE_ALLOWED.includes(tags.bicycle ?? "");
 }
-
-export type DrivingSide = "right" | "left";
 
 // null when the box has both driving sides
 export function drivingSideIn(bbox: BBox): DrivingSide | null {

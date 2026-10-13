@@ -4,7 +4,7 @@ import cron from "node-cron";
 import {
     DEM_CACHE_DIR, DEM_CACHE_MAX_MB, DEM_CACHE_TTL_DAYS, INSTRUCTIONS_CACHE_DIR, INSTRUCTIONS_CACHE_MAX_MB,
     INSTRUCTIONS_CACHE_TTL_DAYS, OSM_CACHE_DIR, OSM_CACHE_MAX_MB, OSM_CACHE_TTL_DAYS,
-} from "./config";
+} from "../config";
 
 export interface DiskCache {
     dir: string;

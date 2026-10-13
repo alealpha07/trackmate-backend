@@ -3,12 +3,10 @@ import { User } from "@prisma/client";
 import { sanitizeParams, isAuthenticated } from "../utils";
 import { haversineMeters } from "../routing/haversine";
 import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES } from "../routing/config";
-import { Policy } from "../routing/edgeWeight";
-import { RouteFilters } from "../routing/filters";
 import { planRoute } from "../routing/plan";
-import { PartialDownloadError } from "../routing/tileCache";
+import { PartialDownloadError } from "../routing/data/tileCache";
 import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
-import { LatLng } from "../routing/types";
+import { LatLng, Policy, RouteFilters } from "../routing/types";
 import { isPlannable } from "../vehicles";
 
 const router = express.Router();

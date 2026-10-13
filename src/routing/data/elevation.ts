@@ -3,12 +3,9 @@ import path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { fromFile } from "geotiff";
-import { DEM_CACHE_DIR, DEM_GROUND_RADIUS, DEM_URL, OVERPASS_USER_AGENT } from "./config";
+import { DEM_CACHE_DIR, DEM_GROUND_RADIUS, DEM_URL, OVERPASS_USER_AGENT } from "../config";
 import { DEM_CACHE, isFresh, markUsed, pruneSoon } from "./diskCache";
-import { BBox } from "./types";
-
-// meters, 0 at sea
-export type Elevation = (lat: number, lon: number) => number;
+import { BBox, Elevation } from "../types";
 
 interface Grid {
     values: ArrayLike<number>;
