@@ -7,6 +7,8 @@ import { INSTRUCTIONS_CACHE_DIR, VALHALLA_CLIENT_ID, VALHALLA_URL, VALHALLA_USER
 import { INSTRUCTIONS_CACHE, isFresh, markUsed, pruneSoon } from "./diskCache";
 
 const TIMEOUT_MS = 20_000;
+// bump when the cached shape or texts change
+const CACHE_VERSION = 2;
 // FOSSGIS terms: at most 1 request a second, one at a time
 const MIN_REQUEST_GAP_MS = 1000;
 const MAX_QUEUED = 30;
@@ -244,13 +246,15 @@ export function placeManeuvers(pieces: any[], points: LatLng[]): Maneuver[] {
         const start = p === 0 || !raw[0].begin ? along : line.locate(raw[0].begin, along, along, 0);
         const scale = pieces.length === 1 && matchedLength > 0 ? line.length / matchedLength : 1;
 
+        const innerArrive = (i: number) =>
+            p < pieces.length - 1 && i === raw.length - 1 && ARRIVE_TYPES.includes(raw[i].m.type);
         let matchedAlong = 0;
         raw.forEach(({ m, begin }, i) => {
             if (begin) along = line.locate(begin, Math.max(along, start), start + matchedAlong * scale);
             matchedAlong += (m.length ?? 0) * 1000;
-            const inner = (p > 0 && i === 0 && DEPART_TYPES.includes(m.type))
-                || (p < pieces.length - 1 && i === raw.length - 1 && ARRIVE_TYPES.includes(m.type));
-            if (inner) return;
+            if ((p > 0 && i === 0 && DEPART_TYPES.includes(m.type)) || innerArrive(i)) return;
+            // the spoken texts before a dropped arrival still mention it ("Then You will arrive")
+            const beforeCut = innerArrive(i + 1);
             maneuvers.push({
                 type: m.type,
                 text: m.instruction ?? "",
@@ -258,8 +262,10 @@ export function placeManeuvers(pieces: any[], points: LatLng[]): Maneuver[] {
                 along: round1(along),
                 length: round1((m.length ?? 0) * 1000),
                 time: round1(m.time ?? 0),
-                verbalPre: m.verbal_pre_transition_instruction ?? null,
-                verbalPost: m.verbal_post_transition_instruction ?? null,
+                verbalPre: (beforeCut && m.verbal_multi_cue
+                    ? m.verbal_transition_alert_instruction ?? m.instruction
+                    : m.verbal_pre_transition_instruction) ?? null,
+                verbalPost: beforeCut ? null : m.verbal_post_transition_instruction ?? null,
             });
         });
     });
@@ -343,6 +349,7 @@ export function joinChunks(parts: { chunk: Chunk; result: TrackInstructions }[])
             const length = round1(kept[0].along - previous.along);
             previous.time = previous.length > 0 ? round1((previous.time * length) / previous.length) : previous.time;
             previous.length = length;
+            previous.verbalPost = null;
         }
         maneuvers.push(...kept);
 
@@ -456,7 +463,7 @@ async function chunkInstructions(chunk: Chunk, request: InstructionsRequest): Pr
 
 function cacheFile(request: InstructionsRequest): string {
     const hash = crypto.createHash("sha1").update(JSON.stringify(request.points)).digest("hex").slice(0, 16);
-    return path.join(INSTRUCTIONS_CACHE_DIR, `${request.trackId}-${request.costing}-${request.language}-${hash}.json`);
+    return path.join(INSTRUCTIONS_CACHE_DIR, `${request.trackId}-${request.costing}-${request.language}-${hash}-${CACHE_VERSION}.json`);
 }
 
 function readCache(file: string): TrackInstructions | null {
