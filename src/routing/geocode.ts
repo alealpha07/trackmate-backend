@@ -1,7 +1,9 @@
+import { CONTACT_EMAIL } from "./config";
+
 // proxied to keep the Stadia key on the server, full search adds Photon (slower)
 const STADIA_AUTOCOMPLETE_URL = "https://api.stadiamaps.com/geocoding/v1/autocomplete";
 const PHOTON_URL = process.env.PHOTON_URL || "https://photon.komoot.io/api";
-const PHOTON_USER_AGENT = "trackmate-backend/1.0 (SafeTrack thesis, route planner)";
+const PHOTON_USER_AGENT = `trackmate-backend/1.0 (SafeTrack thesis, route planner, ${CONTACT_EMAIL})`;
 const RESULT_COUNT = 6;
 const FULL_RESULT_COUNT = 8;
 // duplicate results: same name and close

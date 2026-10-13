@@ -24,6 +24,8 @@ const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 // on 429 wait for the free slot from /api/status
 const MAX_SLOT_WAITS = 10;
 const MAX_SLOT_WAIT_SECONDS = 60;
+// overpass-api.de policy: pause 30 s after a 429
+const MIN_429_PAUSE_MS = 30_000;
 
 function errorSummary(html: string): string {
     const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -103,6 +105,7 @@ export async function fetchOverpass(bbox: BBox, stillWanted: () => boolean = () 
                 attempt++;
                 console.warn(`${message} (retry ${attempt}/${RETRY_DELAYS_MS.length})`);
             }
+            if (error.status === 429) delayMs = Math.max(delayMs, MIN_429_PAUSE_MS);
             await wait(delayMs, stillWanted);
             if (!stillWanted()) throw new Error(`${message} (no longer needed, not retrying)`);
         }

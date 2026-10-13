@@ -123,9 +123,9 @@ const renderPage = ({ title, meta = "", body }: { title: string; meta?: string; 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>${meta}
     <link rel="icon" href="/img/icon.webp">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="/vendor/roboto/400.css">
+    <link rel="stylesheet" href="/vendor/roboto/500.css">
+    <link rel="stylesheet" href="/vendor/roboto/700.css">
     <link rel="stylesheet" href="/theme.css">
     <style>
         main { display: flex; justify-content: center; padding: 24px 16px; }

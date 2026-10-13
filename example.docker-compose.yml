@@ -21,11 +21,12 @@ services:
       - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter
       # tile cache limits (days, MB)
       - OSM_CACHE_TTL_DAYS=30
-      - OSM_CACHE_MAX_MB=1024
+      - OSM_CACHE_MAX_MB=2048
       - DEM_CACHE_TTL_DAYS=365
       - DEM_CACHE_MAX_MB=2048
       # turn-by-turn instructions, the public FOSSGIS server allows at most 1 request a second
       - VALHALLA_URL=https://valhalla1.openstreetmap.de
+      - VALHALLA_CLIENT_ID=PUT_YOUR_PUBLIC_DOMAIN
       - INSTRUCTIONS_CACHE_TTL_DAYS=30
-      - INSTRUCTIONS_CACHE_MAX_MB=256
+      - INSTRUCTIONS_CACHE_MAX_MB=1024
       - STADIA_API_KEY=PUT_YOUR_STADIA_API_KEY

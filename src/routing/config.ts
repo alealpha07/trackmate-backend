@@ -34,11 +34,12 @@ export const OVERPASS_ENDPOINTS = (process.env.OVERPASS_ENDPOINT || "https://ove
     .split(",")
     .map((url) => url.trim())
     .filter(Boolean);
+export const CONTACT_EMAIL = "alealphatv@gmail.com";
 // Overpass mirrors reject generic User-Agents
-export const OVERPASS_USER_AGENT = "trackmate-backend/1.0 (SafeTrack thesis, route planner)";
+export const OVERPASS_USER_AGENT = `trackmate-backend/1.0 (SafeTrack thesis, route planner, ${CONTACT_EMAIL})`;
 export const OVERPASS_TIMEOUT_SECONDS = 120;
-// overpass-api.de allows a few slots per IP
-export const OVERPASS_MAX_PARALLEL = 2;
+// overpass-api.de policy: no parallel requests
+export const OVERPASS_MAX_PARALLEL = 1;
 
 export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "osm");
 // tile cache: refresh after TTL, prune least recently used past MAX_MB
@@ -52,7 +53,9 @@ export const DEM_CACHE_TTL_DAYS = Number(process.env.DEM_CACHE_TTL_DAYS) || 365;
 export const DEM_CACHE_MAX_MB = Number(process.env.DEM_CACHE_MAX_MB) || 2048;
 export const VALHALLA_URL = (process.env.VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/+$/, "");
 // FOSSGIS wants the app and a contact in the User-Agent
-export const VALHALLA_USER_AGENT = "trackmate-backend/1.0 (turn-by-turn instructions, alealphatv@gmail.com)";
+export const VALHALLA_USER_AGENT = `trackmate-backend/1.0 (turn-by-turn instructions, ${CONTACT_EMAIL})`;
+// the Valhalla README asks published apps to send this
+export const VALHALLA_CLIENT_ID = process.env.VALHALLA_CLIENT_ID || hostOf(process.env.PUBLIC_URL) || "trackmate";
 export const INSTRUCTIONS_CACHE_DIR = process.env.INSTRUCTIONS_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "instructions");
 export const INSTRUCTIONS_CACHE_TTL_DAYS = Number(process.env.INSTRUCTIONS_CACHE_TTL_DAYS) || 30;
 export const INSTRUCTIONS_CACHE_MAX_MB = Number(process.env.INSTRUCTIONS_CACHE_MAX_MB) || 256;
@@ -83,3 +86,11 @@ export const DEFAULT_LANES = 2;
 
 export const POLICIES = ["safest", "shortest"];
 export const FILTERS = ["cyclewaysOnly", "avoidUnpaved", "avoidLts4"] as const;
+
+function hostOf(url?: string): string | undefined {
+    try {
+        return url ? new URL(url).host : undefined;
+    } catch {
+        return undefined;
+    }
+}

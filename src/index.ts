@@ -60,6 +60,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "public"), { extensions: ["html"] }));
+// served from here so browsers never contact Google Fonts or a CDN (GDPR)
+const vendor = (pkg: string) => express.static(path.join(__dirname, "..", "node_modules", pkg));
+app.use("/vendor/maplibre-gl", vendor("maplibre-gl/dist"));
+app.use("/vendor/roboto", vendor("@fontsource/roboto"));
 // the planner is the only web page for now
 app.get("/", (request, response) => response.redirect(request.isAuthenticated() ? "/plan" : "/login"));
 

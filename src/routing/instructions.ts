@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { haversineMeters, toRadians, EARTH_RADIUS_METERS } from "./haversine";
 import { LatLng } from "./types";
-import { INSTRUCTIONS_CACHE_DIR, VALHALLA_URL, VALHALLA_USER_AGENT } from "./config";
+import { INSTRUCTIONS_CACHE_DIR, VALHALLA_CLIENT_ID, VALHALLA_URL, VALHALLA_USER_AGENT } from "./config";
 import { INSTRUCTIONS_CACHE, isFresh, markUsed, pruneSoon } from "./diskCache";
 
 const TIMEOUT_MS = 20_000;
@@ -382,7 +382,11 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
 }
 
 async function valhalla(endpoint: string, body: object): Promise<any> {
-    const headers: Record<string, string> = { "Content-Type": "application/json", "User-Agent": VALHALLA_USER_AGENT };
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "User-Agent": VALHALLA_USER_AGENT,
+        "X-Client-Id": VALHALLA_CLIENT_ID,
+    };
     // FOSSGIS asks for a Referer when there is one
     if (process.env.PUBLIC_URL) headers.Referer = process.env.PUBLIC_URL;
     let res: globalThis.Response;
