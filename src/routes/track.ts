@@ -1,10 +1,10 @@
 import express, { Request, Response } from "express";
-import { User, Vehicle } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, canSeeRoute } from "../utils";
-import { removeFiles, removeTrackFiles, trackFile, travelFile } from "../files";
-import { fileLimit, instructionsLimit } from "../limits";
-import { parseVehicle, vehicleClass, vehicleCosting, vehicleId } from "../vehicles";
-import { InstructionsError, trackInstructions, trackPoints, valhallaLanguage } from "../routing/instructions";
+import { User, Vehicle } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, canSeeRoute } from "../utils.js";
+import { removeFiles, removeTrackFiles, trackFile, travelFile } from "../files.js";
+import { fileLimit, instructionsLimit } from "../limits.js";
+import { parseVehicle, vehicleClass, vehicleCosting, vehicleId } from "../vehicles.js";
+import { InstructionsError, trackInstructions, trackPoints, valhallaLanguage } from "../routing/instructions/index.js";
 import multer from "multer"
 import path from "path"
 import fs from "fs";

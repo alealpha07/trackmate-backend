@@ -5,25 +5,29 @@ The API behind the Trackmate Android app, plus the web route planner. For what t
 
 ## Tech stack
 
-- Node.js 22, TypeScript, Express
-- Prisma with SQLite
+- Node.js 24, TypeScript 7 (ES modules), Express 5
+- Prisma 7 with SQLite (better-sqlite3 driver adapter)
 - Passport for login sessions
 - OpenStreetMap data from Overpass, Copernicus elevation data, Stadia Maps and Photon for place search
 - Web planner in plain HTML, CSS and JavaScript, with MapLibre GL
 
 ## Development
 
-You need Node.js 22 and npm.
+You need Node.js 24 and npm.
 
 ```bash
 git clone https://github.com/alealpha07/trackmate-backend.git
 cd trackmate-backend
 cp example.env .env   # then fill in the values
 npm install
+npm run db:generate   # Prisma client, into src/generated
 npm run db:migrate
 npm run db:seed       # optional
-npm run dev
+npm run dev           # tsx, restarts on changes
 ```
+
+`npm run build` compiles to `dist/` and `npm start` runs it. Prisma 7 no longer generates the client or seeds after a
+migration, so run `db:generate` again after changing `prisma/schema.prisma`.
 
 The server listens on the port set in `.env` (3000 in the example). The seed creates three users, giulia (Parma),
 marco (Milano) and lena (Berlin), all with the password `trackmate`. Each has three tracks around their city, two

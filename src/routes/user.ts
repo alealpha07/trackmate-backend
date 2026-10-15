@@ -1,15 +1,15 @@
 import express, { NextFunction, Request, Response } from "express";
-import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER, deleteUserSessions } from "../utils";
-import { postImageFiles, profileImageFile, removeFiles, removeTrackFiles, trackFile, travelFile } from "../files";
-import { checkPassword } from "../passportConfig";
-import { fileLimit, passwordLimit } from "../limits";
+import { User } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER, deleteUserSessions } from "../utils.js";
+import { postImageFiles, profileImageFile, removeFiles, removeTrackFiles, trackFile, travelFile } from "../files.js";
+import { checkPassword } from "../passportConfig.js";
+import { fileLimit, passwordLimit } from "../limits.js";
 import multer from "multer"
 import path from "path"
 import fs from "fs";
 import sharp from "sharp";
-import archiver from "archiver";
-import { parseVehicle, VEHICLES, vehicleId } from "../vehicles";
+import { ZipArchive } from "archiver";
+import { parseVehicle, VEHICLES, vehicleId } from "../vehicles.js";
 
 const router = express.Router();
 const MAX_BIO_LENGTH = 500;
@@ -100,7 +100,7 @@ router.delete("/image", isAuthenticated, async (req: Request, res: Response): Pr
 router.put("/", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
         // empty bio is allowed
-        const bio = request.body.bio;
+        const bio = request.body?.bio;
         if (typeof bio !== "string") {
             return response.status(422).send(response.__("server.missing-params") + response.__("bio"));
         }
@@ -257,7 +257,7 @@ router.get("/export", isAuthenticated, fileLimit, async (request: Request, respo
             savedPostIds: saves.map((save) => save.postId),
         };
 
-        const archive = archiver("zip");
+        const archive = new ZipArchive();
         archive.on("error", next);
         response.attachment(`trackmate-${user.username}.zip`);
         archive.pipe(response);

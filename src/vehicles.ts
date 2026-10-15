@@ -1,4 +1,4 @@
-import { Vehicle } from "@prisma/client";
+import { Vehicle } from "./generated/prisma/client.js";
 
 export type VehicleClass = "motor" | "bicycle" | "foot";
 

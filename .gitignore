@@ -11,3 +11,5 @@ appuploads
 cache
 appcache
 *.log
+# made by prisma generate
+src/generated/

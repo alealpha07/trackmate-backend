@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { prisma, UPLOAD_DIR } from "./utils";
-import { INSTRUCTIONS_CACHE_DIR } from "./routing/config";
+import { prisma, UPLOAD_DIR } from "./utils.js";
+import { INSTRUCTIONS_CACHE_DIR } from "./routing/config.js";
 
 const PROFILE_DIR = path.join(UPLOAD_DIR, "profile");
 const POSTS_DIR = path.join(UPLOAD_DIR, "posts");

@@ -1,9 +1,9 @@
 import Local from "passport-local";
 const LocalStrategy = Local.Strategy;
 import bcrypt from "bcryptjs";
-import { prisma } from "./utils";
+import { prisma } from "./utils.js";
 import { DoneCallback, PassportStatic } from "passport";
-import { User } from "@prisma/client";
+import { User } from "./generated/prisma/client.js";
 
 const BCRYPT_COST = 12;
 export const PASSWORD_MIN_LENGTH = 8;

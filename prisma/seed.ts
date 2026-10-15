@@ -1,12 +1,12 @@
-import { PrismaClient, Vehicle } from "@prisma/client";
-import { dailyQuests } from "../src/quests";
+import "dotenv/config";
+import { Vehicle } from "../src/generated/prisma/client.js";
+import { dailyQuests } from "../src/quests.js";
+import { prisma } from "../src/utils.js";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
-
-const projectRoot = path.resolve(__dirname, "..");
+const projectRoot = path.resolve(import.meta.dirname, "..");
 const seedDir = path.join(projectRoot, "seed-data");
 const uploadsDir = path.join(projectRoot, "uploads");
 

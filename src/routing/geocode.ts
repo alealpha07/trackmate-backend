@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL } from "./config";
+import { CONTACT_EMAIL } from "./config.js";
 
 // proxied to keep the Stadia key on the server, full search adds Photon (slower)
 const STADIA_AUTOCOMPLETE_URL = "https://api.stadiamaps.com/geocoding/v1/autocomplete";

@@ -1,6 +1,6 @@
-import { EARTH_RADIUS_METERS, toRadians } from "../haversine";
-import { Chunk, LatLng, Maneuver, SpeedLimit, TrackInstructions } from "../types";
-import { cumulativeMeters, decodePolyline6 } from "./polyline";
+import { EARTH_RADIUS_METERS, toRadians } from "../haversine.js";
+import { Chunk, LatLng, Maneuver, SpeedLimit, TrackInstructions } from "../types.js";
+import { cumulativeMeters, decodePolyline6 } from "./polyline.js";
 
 // Valhalla's default trace limit is 200 km, the overlap gives turns at the cut some context
 const CHUNK_METERS = 100_000;

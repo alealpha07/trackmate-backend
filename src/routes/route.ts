@@ -1,14 +1,14 @@
 import express, { Request, Response } from "express";
-import { User } from "@prisma/client";
-import { sanitizeParams, isAuthenticated } from "../utils";
-import { haversineMeters } from "../routing/haversine";
-import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES } from "../routing/config";
-import { planRoute } from "../routing/plan";
-import { PartialDownloadError } from "../routing/data/tileCache";
-import { geocode, isGeocodingConfigured } from "../routing/geocode";
-import { geocodeLimit, planLimit, releasePlanSlot, takePlanSlot } from "../limits";
-import { LatLng, Policy, RouteFilters } from "../routing/types";
-import { isPlannable } from "../vehicles";
+import { User } from "../generated/prisma/client.js";
+import { sanitizeParams, isAuthenticated } from "../utils.js";
+import { haversineMeters } from "../routing/haversine.js";
+import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES } from "../routing/config.js";
+import { planRoute } from "../routing/plan.js";
+import { PartialDownloadError } from "../routing/data/tileCache.js";
+import { geocode, isGeocodingConfigured } from "../routing/geocode.js";
+import { geocodeLimit, planLimit, releasePlanSlot, takePlanSlot } from "../limits.js";
+import { LatLng, Policy, RouteFilters } from "../routing/types.js";
+import { isPlannable } from "../vehicles.js";
 
 const router = express.Router();
 

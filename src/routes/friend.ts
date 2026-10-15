@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
-import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER } from "../utils";
+import { User } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER } from "../utils.js";
 
 const router = express.Router();
 

@@ -1,5 +1,5 @@
-import { haversineMeters } from "../haversine";
-import { LatLng } from "../types";
+import { haversineMeters } from "../haversine.js";
+import { LatLng } from "../types.js";
 
 const MIN_SPACING_METERS = 10;
 const MAX_SHAPE_POINTS = 16_000;

@@ -1,10 +1,12 @@
 import path from "path"
-import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "./generated/prisma/client.js";
 import { Request, Response, NextFunction } from "express";
+import { databaseUrl } from "./databaseUrl.js";
 
-export const prisma = new PrismaClient();;
+export const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: databaseUrl() }) });
 
-export function sanitizeParams(requiredParams: Array<string>, requestParams: any) {
+export function sanitizeParams(requiredParams: Array<string>, requestParams: any = {}) {
     const sanitizedParams:any = {};
     const missingParams:Array<string> = [];
     
@@ -19,7 +21,7 @@ export function sanitizeParams(requiredParams: Array<string>, requestParams: any
     return { sanitizedParams, missingParams };
 }
 
-export const UPLOAD_DIR = path.join(__dirname, "..", "uploads");
+export const UPLOAD_DIR = path.join(import.meta.dirname, "..", "uploads");
 export const UPLOAD_FILE_DIR = "uploads/";
 
 export function isAuthenticated(request: Request, response: Response, next: NextFunction): void{

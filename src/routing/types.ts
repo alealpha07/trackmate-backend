@@ -1,4 +1,4 @@
-import { FILTERS, POLICIES } from "./config";
+import { FILTERS, POLICIES } from "./config.js";
 
 export type Policy = (typeof POLICIES)[number];
 

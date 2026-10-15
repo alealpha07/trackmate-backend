@@ -3,9 +3,9 @@ import path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { fromFile } from "geotiff";
-import { DEM_CACHE_DIR, DEM_GROUND_RADIUS, DEM_URL, OVERPASS_USER_AGENT } from "../config";
-import { DEM_CACHE, isFresh, markUsed, pruneSoon } from "./diskCache";
-import { BBox, Elevation } from "../types";
+import { DEM_CACHE_DIR, DEM_GROUND_RADIUS, DEM_URL, OVERPASS_USER_AGENT } from "../config.js";
+import { DEM_CACHE, isFresh, markUsed, pruneSoon } from "./diskCache.js";
+import { BBox, Elevation } from "../types.js";
 
 interface Grid {
     values: ArrayLike<number>;

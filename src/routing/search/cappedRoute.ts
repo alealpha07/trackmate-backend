@@ -1,7 +1,7 @@
-import { dijkstra } from "./dijkstra";
-import { haversineMeters } from "../haversine";
-import { MinHeap, keyLess } from "./priorityQueue";
-import { GraphEdge, RouteResult, RoutingGraph } from "../types";
+import { dijkstra } from "./dijkstra.js";
+import { haversineMeters } from "../haversine.js";
+import { MinHeap, keyLess } from "./priorityQueue.js";
+import { GraphEdge, RouteResult, RoutingGraph } from "../types.js";
 
 type Weight = (edge: GraphEdge) => number;
 

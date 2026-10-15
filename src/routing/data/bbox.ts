@@ -1,6 +1,6 @@
-import { BBOX_BUFFER_METERS } from "../config";
-import { EARTH_RADIUS_METERS, toRadians } from "../haversine";
-import { BBox, LatLng, OverpassElement } from "../types";
+import { BBOX_BUFFER_METERS } from "../config.js";
+import { EARTH_RADIUS_METERS, toRadians } from "../haversine.js";
+import { BBox, LatLng, OverpassElement } from "../types.js";
 
 const METERS_PER_DEGREE_LAT = (Math.PI * EARTH_RADIUS_METERS) / 180;
 

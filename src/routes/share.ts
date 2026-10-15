@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import fs from "fs";
-import { parseId, prisma } from "../utils";
-import { postImageFile } from "../files";
+import { parseId, prisma } from "../utils.js";
+import { postImageFile } from "../files.js";
 
 const router = express.Router();
 

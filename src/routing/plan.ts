@@ -1,13 +1,13 @@
-import { nodeExtent, planningBBox } from "./data/bbox";
-import { buildGraph } from "./graph/buildGraph";
-import { capDetour } from "./search/cappedRoute";
-import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config";
-import { markSnappable, nearestNode } from "./graph/snap";
-import { loadDemTiles, loadElevation } from "./data/elevation";
-import { buildAdjacency, dijkstra } from "./search/dijkstra";
-import { edgeCost, edgePenalties } from "./search/edgeWeight";
-import { loadTiles } from "./data/tileCache";
-import { GraphEdge, LatLng, PlannedRoute, Policy, RouteFilters, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types";
+import { nodeExtent, planningBBox } from "./data/bbox.js";
+import { buildGraph } from "./graph/buildGraph.js";
+import { capDetour } from "./search/cappedRoute.js";
+import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config.js";
+import { markSnappable, nearestNode } from "./graph/snap.js";
+import { loadDemTiles, loadElevation } from "./data/elevation.js";
+import { buildAdjacency, dijkstra } from "./search/dijkstra.js";
+import { edgeCost, edgePenalties } from "./search/edgeWeight.js";
+import { loadTiles } from "./data/tileCache.js";
+import { GraphEdge, LatLng, PlannedRoute, Policy, RouteFilters, RouteLeg, RouteStats, RoutingGraph, TrackPoint } from "./types.js";
 
 interface CachedGraph {
     graph: RoutingGraph;

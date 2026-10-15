@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User } from "@prisma/client";
+import { User } from "./generated/prisma/client.js";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 
 const MINUTE_MS = 60 * 1000;

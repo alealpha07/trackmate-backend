@@ -1,11 +1,11 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { Chunk, LatLng, TrackInstructions } from "../types";
-import { INSTRUCTIONS_CACHE_DIR, VALHALLA_CLIENT_ID, VALHALLA_URL, VALHALLA_USER_AGENT } from "../config";
-import { INSTRUCTIONS_CACHE, isFresh, markUsed, pruneSoon } from "../data/diskCache";
-import { joinChunks, placeManeuvers, placeSpeedLimits, splitTrack, tripPieces } from "./maneuvers";
-import { cumulativeMeters, encodePolyline6, traceShape } from "./polyline";
+import { Chunk, LatLng, TrackInstructions } from "../types.js";
+import { INSTRUCTIONS_CACHE_DIR, VALHALLA_CLIENT_ID, VALHALLA_URL, VALHALLA_USER_AGENT } from "../config.js";
+import { INSTRUCTIONS_CACHE, isFresh, markUsed, pruneSoon } from "../data/diskCache.js";
+import { joinChunks, placeManeuvers, placeSpeedLimits, splitTrack, tripPieces } from "./maneuvers.js";
+import { cumulativeMeters, encodePolyline6, traceShape } from "./polyline.js";
 
 const TIMEOUT_MS = 20_000;
 // bump when the cached shape or texts change

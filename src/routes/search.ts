@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
-import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER } from "../utils";
-import { searchLimit } from "../limits";
+import { User } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER } from "../utils.js";
+import { searchLimit } from "../limits.js";
 
 const router = express.Router();
 

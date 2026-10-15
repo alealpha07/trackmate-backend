@@ -1,5 +1,5 @@
-import { SMALL_COMPONENT_SIZE } from "../config";
-import { GraphEdge, RoutingGraph } from "../types";
+import { SMALL_COMPONENT_SIZE } from "../config.js";
+import { GraphEdge, RoutingGraph } from "../types.js";
 
 // points only snap to big connected parts of the network (iterative Tarjan)
 export function markSnappable(graph: RoutingGraph, adjacency: Map<string, GraphEdge[]>): void {

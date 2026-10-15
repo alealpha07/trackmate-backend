@@ -1,7 +1,7 @@
 import cron from "node-cron";
-import { prisma } from "./utils";
-import { dailyQuests } from "./quests";
-import { removeOrphanFiles } from "./files";
+import { prisma } from "./utils.js";
+import { dailyQuests } from "./quests.js";
+import { removeOrphanFiles } from "./files.js";
 
 export async function assignDailyQuests() {
   const users = await prisma.user.findMany({ select: { id: true, vehicles: { select: { vehicle: true } } } });

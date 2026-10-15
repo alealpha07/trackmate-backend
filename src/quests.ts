@@ -1,4 +1,4 @@
-import { QuestType, Vehicle } from "@prisma/client";
+import { QuestType, Vehicle } from "./generated/prisma/client.js";
 
 export const QUESTS_PER_VEHICLE = 2;
 

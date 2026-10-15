@@ -1,3 +1,4 @@
+import * as maplibregl from "/vendor/maplibre-gl/maplibre-gl.mjs";
 import { api, apiStream, applyTranslations, t } from "./common.js";
 
 applyTranslations();

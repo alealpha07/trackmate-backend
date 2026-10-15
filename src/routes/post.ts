@@ -1,8 +1,8 @@
 import express, { Request, Response } from "express";
-import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER } from "../utils";
-import { postImageFile, postImageFiles, removeFiles } from "../files";
-import { fileLimit } from "../limits";
+import { User } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER } from "../utils.js";
+import { postImageFile, postImageFiles, removeFiles } from "../files.js";
+import { fileLimit } from "../limits.js";
 import multer from "multer"
 import path from "path"
 import fs from "fs";

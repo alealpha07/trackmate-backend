@@ -1,5 +1,5 @@
-import { PATH_HIGHWAYS, carDirection, lanesPerDirection, maxspeedKmh, totalLanes } from "./osmTags";
-import { BikeInfra, Direction, Lts, Tags } from "../types";
+import { PATH_HIGHWAYS, carDirection, lanesPerDirection, maxspeedKmh, totalLanes } from "./osmTags.js";
+import { BikeInfra, Direction, Lts, Tags } from "../types.js";
 
 // the criteria use mph steps
 function speedMph(tags: Tags, direction: Direction): number {

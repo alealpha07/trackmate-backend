@@ -1,5 +1,5 @@
-import { PATH_HIGHWAYS } from "./osmTags";
-import { BikeInfra, RouteType, Tags } from "../types";
+import { PATH_HIGHWAYS } from "./osmTags.js";
+import { BikeInfra, RouteType, Tags } from "../types.js";
 
 // injury risk relative to a major street with parked cars (1.00)
 export const ROUTE_TYPE_OR: Record<RouteType, number> = {

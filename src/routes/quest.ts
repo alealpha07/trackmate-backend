@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
-import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId } from "../utils";
-import { parseVehicle, vehicleId } from "../vehicles";
+import { User } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId } from "../utils.js";
+import { parseVehicle, vehicleId } from "../vehicles.js";
 
 const MAX_EXP_PER_LEVEL = 1000;
 // km or tracks in one go, far above any real travel

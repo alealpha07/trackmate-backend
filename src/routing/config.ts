@@ -41,13 +41,13 @@ export const OVERPASS_TIMEOUT_SECONDS = 120;
 // overpass-api.de policy: no parallel requests
 export const OVERPASS_MAX_PARALLEL = 1;
 
-export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "osm");
+export const OSM_CACHE_DIR = process.env.OSM_CACHE_DIR || path.join(import.meta.dirname, "..", "..", "cache", "osm");
 // tile cache: refresh after TTL, prune least recently used past MAX_MB
 export const OSM_CACHE_TTL_DAYS = Number(process.env.OSM_CACHE_TTL_DAYS) || 30;
 export const OSM_CACHE_MAX_MB = Number(process.env.OSM_CACHE_MAX_MB) || 1024;
 // Copernicus GLO-30, 30 m grid, no key needed
 export const DEM_URL = process.env.DEM_URL || "https://copernicus-dem-30m.s3.amazonaws.com";
-export const DEM_CACHE_DIR = process.env.DEM_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "dem");
+export const DEM_CACHE_DIR = process.env.DEM_CACHE_DIR || path.join(import.meta.dirname, "..", "..", "cache", "dem");
 // Italy is about 45 tiles, 1.8 GB
 export const DEM_CACHE_TTL_DAYS = Number(process.env.DEM_CACHE_TTL_DAYS) || 365;
 export const DEM_CACHE_MAX_MB = Number(process.env.DEM_CACHE_MAX_MB) || 2048;
@@ -56,7 +56,7 @@ export const VALHALLA_URL = (process.env.VALHALLA_URL || "https://valhalla1.open
 export const VALHALLA_USER_AGENT = `trackmate-backend/1.0 (turn-by-turn instructions, ${CONTACT_EMAIL})`;
 // the Valhalla README asks published apps to send this
 export const VALHALLA_CLIENT_ID = process.env.VALHALLA_CLIENT_ID || hostOf(process.env.PUBLIC_URL) || "trackmate";
-export const INSTRUCTIONS_CACHE_DIR = process.env.INSTRUCTIONS_CACHE_DIR || path.join(__dirname, "..", "..", "cache", "instructions");
+export const INSTRUCTIONS_CACHE_DIR = process.env.INSTRUCTIONS_CACHE_DIR || path.join(import.meta.dirname, "..", "..", "cache", "instructions");
 export const INSTRUCTIONS_CACHE_TTL_DAYS = Number(process.env.INSTRUCTIONS_CACHE_TTL_DAYS) || 30;
 export const INSTRUCTIONS_CACHE_MAX_MB = Number(process.env.INSTRUCTIONS_CACHE_MAX_MB) || 256;
 // a 30 m grid is too coarse for short edges

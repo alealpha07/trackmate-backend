@@ -1,9 +1,9 @@
 import express, { NextFunction, Request, Response } from "express";
 import passport from "passport";
-import { User, Vehicle } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER, deleteUserSessions } from "../utils";
-import { checkPassword, hashPassword, passwordProblem } from "../passportConfig";
-import { passwordLimit, registerLimit } from "../limits";
+import { User, Vehicle } from "../generated/prisma/client.js";
+import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER, deleteUserSessions } from "../utils.js";
+import { checkPassword, hashPassword, passwordProblem } from "../passportConfig.js";
+import { passwordLimit, registerLimit } from "../limits.js";
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,30}$/;
 const router = express.Router();
 

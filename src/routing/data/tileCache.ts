@@ -1,10 +1,10 @@
 import fs from "fs";
 import path from "path";
 import zlib from "zlib";
-import { OSM_CACHE_DIR, OVERPASS_MAX_PARALLEL, TILE_SIZE_DEG } from "../config";
-import { OSM_CACHE, isFresh as isFreshIn, markUsed, pruneSoon } from "./diskCache";
-import { fetchOverpass } from "./overpass";
-import { BBox, OverpassElement, OverpassNode, OverpassWay } from "../types";
+import { OSM_CACHE_DIR, OVERPASS_MAX_PARALLEL, TILE_SIZE_DEG } from "../config.js";
+import { OSM_CACHE, isFresh as isFreshIn, markUsed, pruneSoon } from "./diskCache.js";
+import { fetchOverpass } from "./overpass.js";
+import { BBox, OverpassElement, OverpassNode, OverpassWay } from "../types.js";
 
 interface Tile {
     x: number;
