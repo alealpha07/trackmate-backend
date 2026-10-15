@@ -248,7 +248,7 @@ router.get("/", isAuthenticated, async (request: Request, response: Response): P
         });
 
         if (!post) {
-            return response.status(404).send(response.__("post.missing"));
+            return response.status(404).send(response.__("post.errors.missing"));
         }
 
         const liked = post.likes.some(like => like.userId === (request.user as User).id);

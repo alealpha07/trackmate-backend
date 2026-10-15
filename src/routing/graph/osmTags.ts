@@ -145,6 +145,9 @@ function parseSpeed(value: string | undefined): number | null {
     if (text === "none") return 130;
     const zone = text.match(/zone:?(\d+)$/);
     if (zone) return Number(zone[1]);
+    // zone:maxspeed=DE:30
+    const coded = text.match(/^[a-z]{2}:(\d+)$/);
+    if (coded) return Number(coded[1]);
     const implicit: Record<string, number> = {
         urban: 50, rural: 90, motorway: 130, trunk: 110, living_street: 20, bicycle_road: 30,
     };

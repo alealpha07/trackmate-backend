@@ -10,3 +10,5 @@ dist
 
 cache
 src/generated
+test
+coverage

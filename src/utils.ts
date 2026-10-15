@@ -21,7 +21,7 @@ export function sanitizeParams(requiredParams: Array<string>, requestParams: any
     return { sanitizedParams, missingParams };
 }
 
-export const UPLOAD_DIR = path.join(import.meta.dirname, "..", "uploads");
+export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(import.meta.dirname, "..", "uploads");
 export const UPLOAD_FILE_DIR = "uploads/";
 
 export function isAuthenticated(request: Request, response: Response, next: NextFunction): void{

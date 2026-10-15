@@ -13,3 +13,5 @@ appcache
 *.log
 # made by prisma generate
 src/generated/
+# made by npm run test:coverage
+coverage

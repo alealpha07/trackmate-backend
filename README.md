@@ -37,6 +37,18 @@ The privacy notice and the terms of use are served at `/privacy` and `/terms`, i
 (`?lang=` or the browser language); `?app=1` leaves out the header and footer for the app's WebView. Their texts are in `legal/`; change the date in `src/routes/legal.ts` when one
 changes.
 
+## Tests
+
+```bash
+npm test               # type-checks the tests, then runs them with Vitest
+npm run test:watch
+npm run test:coverage  # report in coverage/
+```
+
+The tests run offline and never read `.env`: each test file gets its own migrated SQLite database, upload folder and
+caches in a temporary directory. Outside services point at a closed local port, and any request to a public host
+fails. Route planning runs on two OpenStreetMap tiles in `test/fixtures/osm/`.
+
 ## Docker
 
 ```bash

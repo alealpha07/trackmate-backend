@@ -7,7 +7,10 @@
     "dev": "tsx watch src/index.ts",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "test": "tsc -p test && vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.3.0",
@@ -43,8 +46,10 @@
     "@types/node": "^24.19.2",
     "@types/passport": "^1.0.17",
     "@types/passport-local": "^1.0.38",
+    "@vitest/coverage-v8": "^5.0.4",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
   },
   "overrides": {
     "deepmerge-ts": "^8.0.2",
