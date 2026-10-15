@@ -11,8 +11,6 @@ const DUPLICATE_DISTANCE_DEG = 0.002;
 const DUPLICATE_LABEL_DISTANCE_DEG = 0.05;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 1000;
-// per user limit for the Stadia credits
-const USER_LIMIT_PER_MINUTE = 30;
 
 export interface GeocodeResult {
     label: string;
@@ -31,19 +29,6 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
-const userWindows = new Map<number, { start: number; count: number }>();
-
-export function takeGeocodeQuota(userId: number): boolean {
-    const now = Date.now();
-    const window = userWindows.get(userId);
-    if (!window || now - window.start >= 60_000) {
-        userWindows.set(userId, { start: now, count: 1 });
-        return true;
-    }
-    window.count++;
-    return window.count <= USER_LIMIT_PER_MINUTE;
-}
-
 export function isGeocodingConfigured(): boolean {
     return !!process.env.STADIA_API_KEY;
 }

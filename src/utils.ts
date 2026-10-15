@@ -30,3 +30,43 @@ export function isAuthenticated(request: Request, response: Response, next: Next
         next();
     }
 }
+
+// ids also end up in file paths, so digits only
+export function parseId(value: unknown): number | null {
+    const text = typeof value === "number" ? String(value) : value;
+    if (typeof text !== "string" || !/^[1-9]\d{0,9}$/.test(text)) return null;
+    const id = Number(text);
+    return id <= 2_147_483_647 ? id : null;
+}
+
+export function sendInvalidId(response: Response) {
+    return response.status(422).send(response.__("server.invalid-id"));
+}
+
+export const PUBLIC_USER = { id: true, username: true, bio: true, level: true, experience: true } as const;
+
+export async function canSeeRoute(userId: number, trackId: number): Promise<boolean> {
+    const visible = await prisma.track.count({
+        where: {
+            id: trackId,
+            OR: [{ userId }, { posts: { some: {} } }, { travels: { some: { userId } } }],
+        },
+    });
+    return visible > 0;
+}
+
+export async function deleteUserSessions(userId: number, keepSid?: string) {
+    const sessions = await prisma.session.findMany({ select: { sid: true, data: true } });
+    const sids = sessions
+        .filter((session) => session.sid !== keepSid && sessionUserId(session.data) === userId)
+        .map((session) => session.sid);
+    await prisma.session.deleteMany({ where: { sid: { in: sids } } });
+}
+
+function sessionUserId(data: string): number | undefined {
+    try {
+        return JSON.parse(data)?.passport?.user;
+    } catch {
+        return undefined;
+    }
+}

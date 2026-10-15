@@ -1,6 +1,8 @@
 import express, { Request, Response } from "express";
 import { User, Vehicle } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, UPLOAD_DIR } from "../utils";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, canSeeRoute } from "../utils";
+import { removeFiles, removeTrackFiles, trackFile, travelFile } from "../files";
+import { fileLimit, instructionsLimit } from "../limits";
 import { parseVehicle, vehicleClass, vehicleCosting, vehicleId } from "../vehicles";
 import { InstructionsError, trackInstructions, trackPoints, valhallaLanguage } from "../routing/instructions";
 import multer from "multer"
@@ -8,19 +10,58 @@ import path from "path"
 import fs from "fs";
 
 const router = express.Router();
-const FINAL_UPLOAD_DIR = path.join(UPLOAD_DIR, "track");
-const TRAVEL_UPLOAD_DIR = path.join(UPLOAD_DIR, "travel");
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+// a day of recording at one point a second
+const MAX_TRACK_POINTS = 100_000;
 
 function vehicleFilter(query: any): Vehicle | undefined | null {
     if (query.vehicle === undefined || query.vehicle === "") return undefined;
     return parseVehicle(query.vehicle);
 }
 
+// the app and the planner both write { track: [{ lat, lng, ... }] }
+function isTrackFile(buffer: Buffer): boolean {
+    let file: any;
+    try {
+        file = JSON.parse(buffer.toString("utf-8"));
+    } catch {
+        return false;
+    }
+    const points = file?.track;
+    return Array.isArray(points) && points.length <= MAX_TRACK_POINTS && points.every((point: any) =>
+        typeof point?.lat === "number" && Math.abs(point.lat) <= 90 &&
+        typeof point?.lng === "number" && Math.abs(point.lng) <= 180
+    );
+}
+
+// sends the error itself when the track is missing or hidden from this user
+async function findVisibleTrack(response: Response, rawId: unknown, userId: number) {
+    const id = parseId(rawId);
+    if (!id) {
+        sendInvalidId(response);
+        return null;
+    }
+    const track = await prisma.track.findUnique({ where: { id } });
+    if (!track) {
+        response.status(404).send(response.__("track.errors.missing"));
+        return null;
+    }
+    if (!(await canSeeRoute(userId, track.id))) {
+        response.status(403).send(response.__("track.errors.hidden"));
+        return null;
+    }
+    return track;
+}
+
+function writeUpload(file: string, buffer: Buffer) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, buffer);
+}
+
 // Upload track JSON
-router.post("/file", isAuthenticated, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
+router.post("/file", isAuthenticated, fileLimit, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
     try {
         if (!req.file) {
             return res.status(422).send(res.__("file.errors.missing"));
@@ -35,7 +76,10 @@ router.post("/file", isAuthenticated, upload.single("file"), async (req: Request
             );
         }
 
-        const trackId = parseInt(sanitizedParams.id);
+        const trackId = parseId(sanitizedParams.id);
+        if (!trackId) {
+            return sendInvalidId(res);
+        }
         const track = await prisma.track.findUnique({ where: { id: trackId } });
         if (!track) {
             return res.status(404).send(res.__("track.errors.missing"));
@@ -43,13 +87,11 @@ router.post("/file", isAuthenticated, upload.single("file"), async (req: Request
         if (track.userId !== (req.user as User).id) {
             return res.status(403).send(res.__("track.errors.not-owner"));
         }
+        if (!isTrackFile(req.file.buffer)) {
+            return res.status(422).send(res.__("track.errors.file"));
+        }
 
-        const outputPath = path.join(FINAL_UPLOAD_DIR, `${trackId}.json`);
-
-        fs.mkdirSync(FINAL_UPLOAD_DIR, { recursive: true });
-        // Save JSON
-        const jsonContent = req.file.buffer.toString("utf-8");
-        fs.writeFileSync(outputPath, jsonContent);
+        writeUpload(trackFile(trackId), req.file.buffer);
 
         res.send(res.__("file.success.upload"));
     } catch (error: any) {
@@ -70,8 +112,9 @@ router.get("/file", isAuthenticated, async (req: Request, res: Response): Promis
             );
         }
 
-        const trackId = sanitizedParams.id;
-        const filePath = path.join(FINAL_UPLOAD_DIR, `${trackId}.json`);
+        const track = await findVisibleTrack(res, sanitizedParams.id, (req.user as User).id);
+        if (!track) return;
+        const filePath = trackFile(track.id);
 
         if (!fs.existsSync(filePath)) {
             return res.status(404).send(res.__("file.errors.missing"));
@@ -85,7 +128,7 @@ router.get("/file", isAuthenticated, async (req: Request, res: Response): Promis
 });
 
 // Turn-by-turn instructions
-router.get("/instructions", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+router.get("/instructions", isAuthenticated, instructionsLimit, async (request: Request, response: Response): Promise<any> => {
     try {
         const requiredParams = ["id"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.query);
@@ -93,10 +136,8 @@ router.get("/instructions", isAuthenticated, async (request: Request, response: 
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        const track = await prisma.track.findUnique({ where: { id: parseInt(sanitizedParams.id) || 0 } });
-        if (!track) {
-            return response.status(404).send(response.__("track.errors.missing"));
-        }
+        const track = await findVisibleTrack(response, sanitizedParams.id, (request.user as User).id);
+        if (!track) return;
         let vehicle = track.vehicle;
         if (request.query.vehicle !== undefined) {
             const requested = parseVehicle(request.query.vehicle);
@@ -109,7 +150,7 @@ router.get("/instructions", isAuthenticated, async (request: Request, response: 
             vehicle = requested;
         }
 
-        const filePath = path.join(FINAL_UPLOAD_DIR, `${track.id}.json`);
+        const filePath = trackFile(track.id);
         let points;
         try {
             points = trackPoints(JSON.parse(await fs.promises.readFile(filePath, "utf-8")));
@@ -184,10 +225,8 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        const track = await prisma.track.findUnique({ where: { id: parseInt(sanitizedParams.id) } });
-        if (!track) {
-            return response.status(404).send(response.__("track.errors.missing"));
-        }
+        const track = await findVisibleTrack(response, sanitizedParams.id, (request.user as User).id);
+        if (!track) return;
         let vehicle = track.vehicle;
         if (request.body.vehicle != null) {
             const requested = parseVehicle(request.body.vehicle);
@@ -220,7 +259,7 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
 })
 
 // Upload travel points (with per-point speed)
-router.post("/travel/file", isAuthenticated, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
+router.post("/travel/file", isAuthenticated, fileLimit, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
     try {
         if (!req.file) {
             return res.status(422).send(res.__("file.errors.missing"));
@@ -235,20 +274,22 @@ router.post("/travel/file", isAuthenticated, upload.single("file"), async (req: 
             );
         }
 
-        const travelId = parseInt(sanitizedParams.id);
+        const travelId = parseId(sanitizedParams.id);
+        if (!travelId) {
+            return sendInvalidId(res);
+        }
         const travel = await prisma.travel.findUnique({ where: { id: travelId } });
         if (!travel) {
-            return res.status(404).send(res.__("track.errors.missing"));
+            return res.status(404).send(res.__("track.errors.travel-missing"));
         }
         if (travel.userId !== (req.user as User).id) {
-            return res.status(403).send(res.__("auth.errors.unauthorized"));
+            return res.status(403).send(res.__("track.errors.travel-not-owner"));
+        }
+        if (!isTrackFile(req.file.buffer)) {
+            return res.status(422).send(res.__("track.errors.file"));
         }
 
-        const outputPath = path.join(TRAVEL_UPLOAD_DIR, `${travelId}.json`);
-
-        fs.mkdirSync(TRAVEL_UPLOAD_DIR, { recursive: true });
-        const jsonContent = req.file.buffer.toString("utf-8");
-        fs.writeFileSync(outputPath, jsonContent);
+        writeUpload(travelFile(travelId), req.file.buffer);
 
         res.send(res.__("file.success.upload"));
     } catch (error: any) {
@@ -269,8 +310,19 @@ router.get("/travel/file", isAuthenticated, async (req: Request, res: Response):
             );
         }
 
-        const travelId = sanitizedParams.id;
-        const filePath = path.join(TRAVEL_UPLOAD_DIR, `${travelId}.json`);
+        const travelId = parseId(sanitizedParams.id);
+        if (!travelId) {
+            return sendInvalidId(res);
+        }
+        const travel = await prisma.travel.findUnique({ where: { id: travelId } });
+        if (!travel) {
+            return res.status(404).send(res.__("track.errors.travel-missing"));
+        }
+        const userId = (req.user as User).id;
+        if (travel.userId !== userId && !(travel.trackId && await canSeeRoute(userId, travel.trackId))) {
+            return res.status(403).send(res.__("track.errors.hidden"));
+        }
+        const filePath = travelFile(travel.id);
 
         if (!fs.existsSync(filePath)) {
             return res.status(404).send(res.__("file.errors.missing"));
@@ -282,6 +334,35 @@ router.get("/travel/file", isAuthenticated, async (req: Request, res: Response):
         res.status(500).send(res.__("server.error"));
     }
 });
+
+// Delete travel
+router.delete("/travel", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+    try {
+        const requiredParams = ["id"];
+        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.query);
+        if (missingParams.length > 0) {
+            return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+        const travelId = parseId(sanitizedParams.id);
+        if (!travelId) {
+            return sendInvalidId(response);
+        }
+
+        const travel = await prisma.travel.findUnique({ where: { id: travelId } });
+        if (!travel) {
+            return response.status(404).send(response.__("track.errors.travel-missing"));
+        }
+        if (travel.userId !== (request.user as User).id) {
+            return response.status(403).send(response.__("track.errors.travel-not-owner"));
+        }
+        await prisma.travel.delete({ where: { id: travel.id } });
+        removeFiles([travelFile(travel.id)]);
+        response.send(response.__("track.success.travel-delete"));
+    } catch (error) {
+        response.status(500).send(response.__("server.error"));
+        console.error(error);
+    }
+})
 
 // Get travels
 router.get("/travel", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
@@ -328,10 +409,12 @@ router.get("/travel/details", isAuthenticated, async (request: Request, response
         if (vehicle === null) {
             return response.status(422).send(response.__("track.errors.vehicle"));
         }
+        const track = await findVisibleTrack(response, sanitizedParams.id, (request.user as User).id);
+        if (!track) return;
 
         const travels = await prisma.travel.findMany({
             where: {
-                trackId: parseInt(sanitizedParams.id),
+                trackId: track.id,
                 vehicle
             },
             include: {
@@ -382,11 +465,13 @@ router.get(
           );
       }
 
-      const trackId = parseInt(sanitizedParams.id);
       const vehicle = vehicleFilter(request.query);
       if (vehicle === null) {
         return response.status(422).send(response.__("track.errors.vehicle"));
       }
+      const track = await findVisibleTrack(response, sanitizedParams.id, (request.user as User).id);
+      if (!track) return;
+      const trackId = track.id;
 
       const leaderboard = await prisma.travel.groupBy({
         by: ["userId"],
@@ -436,6 +521,10 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
+        const trackId = parseId(sanitizedParams.id);
+        if (!trackId) {
+            return sendInvalidId(response);
+        }
         const userId = (request.user as User).id;
         const vehicle = request.body.vehicle == null ? undefined : parseVehicle(request.body.vehicle);
         if (vehicle === null) {
@@ -444,7 +533,7 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
 
         // in a transaction so no other travel slips in
         const error = await prisma.$transaction(async (tx) => {
-            const track = await tx.track.findUnique({ where: { id: parseInt(sanitizedParams.id) } });
+            const track = await tx.track.findUnique({ where: { id: trackId } });
             if (!track) return { status: 404, key: "track.errors.missing" };
             if (track.userId !== userId) return { status: 403, key: "track.errors.not-owner" };
 
@@ -479,12 +568,21 @@ router.delete("/", isAuthenticated, async (request: Request, response: Response)
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.track.delete({
-            where: {
-                id: parseInt(sanitizedParams.id),
-                userId: (request.user as User).id
-            }
-        });
+        const trackId = parseId(sanitizedParams.id);
+        if (!trackId) {
+            return sendInvalidId(response);
+        }
+        const track = await prisma.track.findUnique({ where: { id: trackId }, include: { posts: { select: { id: true } } } });
+        if (!track) {
+            return response.status(404).send(response.__("track.errors.missing"));
+        }
+        if (track.userId !== (request.user as User).id) {
+            return response.status(403).send(response.__("track.errors.not-owner"));
+        }
+
+        // posts go with the track, other users' travels stay without it
+        await prisma.track.delete({ where: { id: track.id } });
+        removeTrackFiles(track.id, track.posts.map((post) => post.id));
         response.send(response.__("track.success.delete"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
@@ -575,8 +673,10 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response): Pro
             return res.status(422).send(res.__("track.errors.vehicle"));
         }
 
+        const visible = await findVisibleTrack(res, sanitizedParams.id, (req.user as User).id);
+        if (!visible) return;
         const track = await prisma.track.findUnique({
-            where: { id: parseInt(sanitizedParams.id) },
+            where: { id: visible.id },
             include: {
                 travels: { where: { vehicle } }
             }
@@ -587,7 +687,7 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response): Pro
         }
 
         const userBestTravel = await prisma.travel.findFirst({
-            where: { trackId: parseInt(sanitizedParams.id), userId: (req.user as User).id, vehicle },
+            where: { trackId: track.id, userId: (req.user as User).id, vehicle },
             orderBy: { time: "asc" },
             select: {
                 id: true,
@@ -604,7 +704,7 @@ router.get("/details", isAuthenticated, async (req: Request, res: Response): Pro
         });
 
         const overallBestTravel = await prisma.travel.findFirst({
-            where: { trackId: parseInt(sanitizedParams.id), vehicle },
+            where: { trackId: track.id, vehicle },
             orderBy: { time: "asc" },
             select: {
                 id: true,

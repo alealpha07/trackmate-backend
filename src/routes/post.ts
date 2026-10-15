@@ -1,31 +1,66 @@
 import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated, UPLOAD_DIR } from "../utils";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER } from "../utils";
+import { postImageFile, postImageFiles, removeFiles } from "../files";
+import { fileLimit } from "../limits";
 import multer from "multer"
 import path from "path"
 import fs from "fs";
 import sharp from "sharp";
 
 const router = express.Router();
-const FINAL_UPLOAD_DIR = path.join(UPLOAD_DIR, "posts");
+const POST_WITH_AUTHOR = { Track: { include: { user: { select: PUBLIC_USER } } } } as const;
 
 const storage = multer.memoryStorage();
 const upload = multer({
     storage,
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
         if (allowedMimeTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error("Only image files are allowed"));
+            cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
         }
     },
 });
 
+// sends the error itself when the post is missing or someone else's
+async function findOwnPost(response: Response, rawId: unknown, userId: number) {
+    const id = parseId(rawId);
+    if (!id) {
+        sendInvalidId(response);
+        return null;
+    }
+    const post = await prisma.post.findUnique({ where: { id }, include: { Track: { select: { userId: true } } } });
+    if (!post) {
+        response.status(404).send(response.__("post.errors.missing"));
+        return null;
+    }
+    if (post.Track.userId !== userId) {
+        response.status(403).send(response.__("post.errors.not-owner"));
+        return null;
+    }
+    return post;
+}
+
+async function findPostId(response: Response, rawId: unknown): Promise<number | null> {
+    const id = parseId(rawId);
+    if (!id) {
+        sendInvalidId(response);
+        return null;
+    }
+    if (!(await prisma.post.findUnique({ where: { id }, select: { id: true } }))) {
+        response.status(404).send(response.__("post.errors.missing"));
+        return null;
+    }
+    return id;
+}
+
 //#region Image
 
 // Upload Image
-router.post("/image", upload.single("file"), isAuthenticated, async (req: Request, res: Response): Promise<any> => {
+router.post("/image", isAuthenticated, fileLimit, upload.single("file"), async (req: Request, res: Response): Promise<any> => {
     try {
         if (!req.file) {
             return res.status(422).json(res.__("file.errors.missing"));
@@ -40,24 +75,22 @@ router.post("/image", upload.single("file"), isAuthenticated, async (req: Reques
             );
         }
 
-        const post = await prisma.post.findUnique({ where: { id: parseInt(sanitizedParams.id) } });
-        if (!post) {
-            return res.json(res.__("post.errors.missing"));
-        }
-        const outputPath = path.join(FINAL_UPLOAD_DIR, `${post.id}-${post.imageCount}.jpg`);
+        const post = await findOwnPost(res, sanitizedParams.id, (req.user as User).id);
+        if (!post) return;
+        const outputPath = postImageFile(post.id, post.imageCount);
+
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+
+        await sharp(req.file.buffer)
+            .resize(1024, 1024, { fit: "cover" })
+            .jpeg({ quality: 90 })
+            .toFile(outputPath);
 
         // Increase image count in db
         await prisma.post.update({
             where: { id: post.id },
             data: { imageCount: post.imageCount + 1 }
         })
-
-        fs.mkdirSync(FINAL_UPLOAD_DIR, { recursive: true });
-
-        await sharp(req.file.buffer)
-            .resize(1024, 1024, { fit: "cover" })
-            .jpeg({ quality: 90 })
-            .toFile(outputPath);
 
         res.json(res.__("file.success.upload"));
     } catch (error: any) {
@@ -78,8 +111,12 @@ router.get("/image", isAuthenticated, async (req: Request, res: Response): Promi
             );
         }
 
-        const { id, index } = sanitizedParams;
-        const filePath = path.join(FINAL_UPLOAD_DIR, `${id}-${index}.jpg`);
+        const id = parseId(sanitizedParams.id);
+        const index = /^\d{1,3}$/.test(String(sanitizedParams.index)) ? Number(sanitizedParams.index) : null;
+        if (!id || index === null) {
+            return sendInvalidId(res);
+        }
+        const filePath = postImageFile(id, index);
         if (!fs.existsSync(filePath)) {
             return res.status(404).json(res.__("file.errors.missing"));
         }
@@ -104,17 +141,31 @@ router.post("/", isAuthenticated, async (request: Request, response: Response): 
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        // Clear previous partial posts
+        const userId = (request.user as User).id;
+        const trackId = parseId(sanitizedParams.id);
+        if (!trackId) {
+            return sendInvalidId(response);
+        }
+        const track = await prisma.track.findUnique({ where: { id: trackId }, select: { userId: true } });
+        if (!track) {
+            return response.status(404).send(response.__("track.errors.missing"));
+        }
+        if (track.userId !== userId) {
+            return response.status(403).send(response.__("track.errors.not-owner"));
+        }
+
+        // Clear this user's previous partial posts
         await prisma.post.deleteMany({
             where: {
-                imageCount: 0
+                imageCount: 0,
+                Track: { userId }
             }
         });
 
         // Create partial post
         const post = await prisma.post.create({
             data: {
-                trackId: sanitizedParams.id,
+                trackId,
                 title: sanitizedParams.title,
                 description: sanitizedParams.description
             }
@@ -135,8 +186,11 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const post = await findOwnPost(response, sanitizedParams.id, (request.user as User).id);
+        if (!post) return;
+
         await prisma.post.update({
-            where: { id: sanitizedParams.id },
+            where: { id: post.id },
             data: {
                 title: sanitizedParams.title,
                 description: sanitizedParams.description
@@ -158,16 +212,11 @@ router.delete("/", isAuthenticated, async (request: Request, response: Response)
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        const regex = new RegExp(`^${sanitizedParams.id}-\\d+\\.jpg$`);
+        const post = await findOwnPost(response, sanitizedParams.id, (request.user as User).id);
+        if (!post) return;
 
-        fs.readdirSync(FINAL_UPLOAD_DIR).forEach(file => {
-            if (regex.test(file)) {
-                const filePath = path.join(FINAL_UPLOAD_DIR, file);
-                fs.unlinkSync(filePath);
-            }
-        });
-
-        await prisma.post.delete({ where: { id: parseInt(sanitizedParams.id), Track: { userId: (request.user as User).id } } });
+        await prisma.post.delete({ where: { id: post.id } });
+        removeFiles(postImageFiles(post.id));
         response.send(response.__("post.success.delete"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
@@ -184,14 +233,15 @@ router.get("/", isAuthenticated, async (request: Request, response: Response): P
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const id = parseId(sanitizedParams.id);
+        if (!id) {
+            return sendInvalidId(response);
+        }
+
         const post = await prisma.post.findUnique({
-            where: { id: parseInt(sanitizedParams.id) },
+            where: { id },
             include: {
-                Track: {
-                    include: {
-                        user: true,
-                    },
-                },
+                ...POST_WITH_AUTHOR,
                 saves: true,
                 likes: true
             }
@@ -234,11 +284,14 @@ router.post("/like", isAuthenticated, async (request: Request, response: Respons
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.like.create({
-            data: {
-                userId: (request.user as User).id,
-                postId: sanitizedParams.id
-            }
+        const postId = await findPostId(response, sanitizedParams.id);
+        if (!postId) return;
+
+        const userId = (request.user as User).id;
+        await prisma.like.upsert({
+            where: { userId_postId: { userId, postId } },
+            create: { userId, postId },
+            update: {}
         });
         response.send(response.__("post.success.like"));
     } catch (error) {
@@ -256,7 +309,12 @@ router.delete("/like", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.like.deleteMany({ where: { userId: (request.user as User).id, postId: parseInt(sanitizedParams.id) } });
+        const postId = parseId(sanitizedParams.id);
+        if (!postId) {
+            return sendInvalidId(response);
+        }
+
+        await prisma.like.deleteMany({ where: { userId: (request.user as User).id, postId } });
         response.send(response.__("post.success.unlike"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
@@ -273,11 +331,14 @@ router.post("/save", isAuthenticated, async (request: Request, response: Respons
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.save.create({
-            data: {
-                userId: (request.user as User).id,
-                postId: sanitizedParams.id
-            }
+        const postId = await findPostId(response, sanitizedParams.id);
+        if (!postId) return;
+
+        const userId = (request.user as User).id;
+        await prisma.save.upsert({
+            where: { userId_postId: { userId, postId } },
+            create: { userId, postId },
+            update: {}
         });
         response.send(response.__("post.success.save"));
     } catch (error) {
@@ -295,7 +356,12 @@ router.delete("/save", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.save.deleteMany({ where: { userId: (request.user as User).id, postId: parseInt(sanitizedParams.id) } });
+        const postId = parseId(sanitizedParams.id);
+        if (!postId) {
+            return sendInvalidId(response);
+        }
+
+        await prisma.save.deleteMany({ where: { userId: (request.user as User).id, postId } });
         response.send(response.__("post.success.unsave"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
@@ -316,18 +382,19 @@ router.get("/user", isAuthenticated, async (request: Request, response: Response
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const userId = parseId(sanitizedParams.id);
+        if (!userId) {
+            return sendInvalidId(response);
+        }
+
         const posts = await prisma.post.findMany({
             where: {
                 Track: {
-                    userId: parseInt(sanitizedParams.id)
+                    userId
                 }
             },
             include: {
-                Track: {
-                    include: {
-                        user: true,
-                    },
-                },
+                ...POST_WITH_AUTHOR,
                 saves: true,
                 likes: true
             }
@@ -399,11 +466,7 @@ router.get("/friends", isAuthenticated, async (request: Request, response: Respo
                 createdAt: "desc"
             },
             include: {
-                Track: {
-                    include: {
-                        user: true,
-                    },
-                },
+                ...POST_WITH_AUTHOR,
                 saves: true,
                 likes: true,
             },
@@ -443,11 +506,7 @@ router.get("/saved", isAuthenticated, async (request: Request, response: Respons
             include: {
                 post: {
                     include: {
-                        Track: {
-                            include: {
-                                user: true,
-                            },
-                        },
+                        ...POST_WITH_AUTHOR,
                         likes: true,
                         saves: true,
                     },
@@ -500,9 +559,7 @@ router.get(
                     }
                 },
                 include: {
-                    Track: {
-                        include: { user: true },
-                    },
+                    ...POST_WITH_AUTHOR,
                     likes: true,
                     saves: true,
                     _count: { select: { likes: true, saves: true } },

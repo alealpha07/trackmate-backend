@@ -1,13 +1,20 @@
 {
 	"server": {
 		"error": "Server error!",
-		"missing-params": "Missing required paramiters: "
+		"missing-params": "Missing required paramiters: ",
+		"invalid-id": "Invalid id!",
+		"too-many-requests": "Too many requests, wait a bit and try again!",
+		"too-large": "The request is too large!",
+		"bad-request": "Invalid request!"
 	},
 	"register": {
 		"success": "User created successfully!",
 		"errors": {
 			"username-taken": "Username already taken!",
-			"passwords-not-match": "Passwords do not match!"
+			"passwords-not-match": "Passwords do not match!",
+			"username": "The username must be 3 to 30 letters, digits, dots, dashes or underscores!",
+			"password-short": "The password must be at least 8 characters long!",
+			"password-long": "The password is too long!"
 		}
 	},
 	"login": {
@@ -17,20 +24,27 @@
 		"success": "Logged out successfully!"
 	},
 	"auth": {
+		"success": {
+			"password": "Password changed successfully!"
+		},
 		"errors": {
 			"unauthorized": "User is not authenticated!",
-			"wrong-credentials": "Wrong Credentials!"
+			"wrong-credentials": "Wrong Credentials!",
+			"wrong-password": "Wrong password!",
+			"too-many-attempts": "Too many wrong attempts, try again in 15 minutes!"
 		}
 	},
 	"user": {
 		"success": {
 			"update": "User updated successfully!",
-			"vehicles": "Vehicles updated successfully!"
+			"vehicles": "Vehicles updated successfully!",
+			"delete": "Account deleted successfully!"
 		},
 		"errors": {
 			"missing": "User not found!",
 			"vehicle": "Unsupported vehicle!",
-			"no-vehicles": "Keep at least one vehicle!"
+			"no-vehicles": "Keep at least one vehicle!",
+			"bio-long": "The bio can be at most %s characters long!"
 		}
 	},
 	"track": {
@@ -38,14 +52,19 @@
 			"create": "Track created successfully!",
 			"update": "Track updated successfully!",
 			"delete": "Track deleted successfully!",
-			"travel": "Travel saved successfully!"
+			"travel": "Travel saved successfully!",
+			"travel-delete": "Travel deleted successfully!"
 		},
 		"errors": {
 			"missing": "Track not found!",
 			"not-owner": "Only the owner can change this track!",
 			"vehicle": "Unsupported vehicle!",
 			"vehicle-class": "This vehicle can't travel this track!",
-			"vehicle-class-locked": "Other users travelled this track: keep a vehicle of the same kind!"
+			"vehicle-class-locked": "Other users travelled this track: keep a vehicle of the same kind!",
+			"hidden": "This track isn't available: it's private!",
+			"file": "Invalid track file!",
+			"travel-missing": "Travel not found!",
+			"travel-not-owner": "Only the owner can change this travel!"
 		}
 	},
 	"friend": {
@@ -54,6 +73,11 @@
 			"accept": "Friend request accepted successfully!",
 			"refuse": "Friend request refused successfully!",
 			"remove": "Friend removed successfully!"
+		},
+		"errors": {
+			"self": "You can't add yourself as a friend!",
+			"exists": "There is already a friend request between you!",
+			"not-friend": "Only friends can see this list!"
 		}
 	},
 	"post": {
@@ -67,7 +91,8 @@
 			"unsave": "Post removed from saved successfully!"
 		},
 		"errors": {
-			"missing": "Post missing!"
+			"missing": "Post missing!",
+			"not-owner": "Only the author can change this post!"
 		}
 	},
 	"quest": {
@@ -77,7 +102,8 @@
 		},
 		"errors": {
 			"missing": "Quest missing!",
-			"uncompleted": "Quest not completed!"
+			"uncompleted": "Quest not completed!",
+			"progress": "Invalid quest progress!"
 		}
 	},
 	"file": {
@@ -86,7 +112,9 @@
 			"delete": "File deleted successfully!"
 		},
 		"errors": {
-			"missing": "Error, file missing!"
+			"missing": "Error, file missing!",
+			"invalid": "Invalid file, only one image is allowed!",
+			"too-large": "The file is too large!"
 		}
 	},
 	"route": {
@@ -106,7 +134,10 @@
 			"instructions": "Turn-by-turn instructions are temporarily unavailable, try again later!",
 			"instructions-timeout": "Turn-by-turn instructions took too long, try again later!",
 			"instructions-no-match": "This track doesn't follow known roads closely enough for turn-by-turn instructions!",
-			"instructions-too-long": "This track is too long for turn-by-turn instructions!"
+			"instructions-too-long": "This track is too long for turn-by-turn instructions!",
+			"plan-running": "A route is already being planned, wait for it to finish!",
+			"plan-busy": "The planner is busy, try again in a minute!",
+			"plan-limit": "Too many routes planned, wait a few minutes and try again!"
 		},
 		"points": {
 			"start": "start",
@@ -125,5 +156,18 @@
 	"name": "name",
 	"vehicles": "vehicles",
 	"type": "type",
-	"progress": "progress"
+	"progress": "progress",
+	"oldPassword": "old password",
+	"newPassword": "new password",
+	"password": "password",
+	"username": "username",
+	"confirmPassword": "password confirmation",
+	"title": "title",
+	"description": "description",
+	"offset": "offset",
+	"index": "index",
+	"time": "time",
+	"averageSpeed": "average speed",
+	"maxSpeed": "max speed",
+	"distance": "distance"
 }

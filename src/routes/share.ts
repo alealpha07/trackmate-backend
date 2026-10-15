@@ -1,10 +1,9 @@
 import express, { Request, Response } from "express";
-import path from "path";
 import fs from "fs";
-import { prisma, UPLOAD_DIR } from "../utils";
+import { parseId, prisma } from "../utils";
+import { postImageFile } from "../files";
 
 const router = express.Router();
-const POSTS_UPLOAD_DIR = path.join(UPLOAD_DIR, "posts");
 
 const ANDROID_PACKAGE_NAME = process.env.ANDROID_PACKAGE_NAME || "com.example.trackmate";
 const ANDROID_CERT_SHA256 = (process.env.ANDROID_CERT_SHA256 || "")
@@ -44,12 +43,18 @@ const findSharedPost = (id: number) =>
         },
     });
 
+// posting is the choice to go public, but search engines stay out
+router.use("/p", (req: Request, res: Response, next) => {
+    res.set("X-Robots-Tag", "noindex");
+    next();
+});
+
 router.get("/p/:id/image", async (req: Request, res: Response): Promise<any> => {
     try {
-        const id = parseInt(req.params.id);
-        if (isNaN(id)) return res.status(404).end();
+        const id = parseId(req.params.id);
+        if (!id) return res.status(404).end();
 
-        const filePath = path.join(POSTS_UPLOAD_DIR, `${id}-0.jpg`);
+        const filePath = postImageFile(id, 0);
         if (!fs.existsSync(filePath)) return res.status(404).end();
 
         res.set("Cache-Control", "public, max-age=3600");
@@ -63,8 +68,8 @@ router.get("/p/:id/image", async (req: Request, res: Response): Promise<any> => 
 // Landing page for shared links opened without the app
 router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
     try {
-        const id = parseInt(req.params.id);
-        const post = isNaN(id) ? null : await findSharedPost(id);
+        const id = parseId(req.params.id);
+        const post = id ? await findSharedPost(id) : null;
         if (!post) {
             return res.status(404).type("html").send(renderPage({
                 title: "Post not found · TrackMate",
@@ -121,6 +126,7 @@ const renderPage = ({ title, meta = "", body }: { title: string; meta?: string; 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
     <title>${title}</title>${meta}
     <link rel="icon" href="/img/icon.webp">
     <link rel="stylesheet" href="/vendor/roboto/400.css">

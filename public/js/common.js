@@ -88,6 +88,7 @@ const STRINGS = {
         "credits.elevation": "Elevation",
         "credits.elevationNotice": "Elevation data produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
         "credits.elevationLiability": "The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
+        "credits.software": "Open-source software",
         "credits.contact": "Contact",
         "credits.contactBody": "Questions or problems with TrackMate:",
         "credits.back": "Back to the planner",

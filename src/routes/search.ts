@@ -1,10 +1,11 @@
 import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated } from "../utils";
+import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER } from "../utils";
+import { searchLimit } from "../limits";
 
 const router = express.Router();
 
-router.get("/", isAuthenticated, async (req: Request, res: Response): Promise<any> => {
+router.get("/", isAuthenticated, searchLimit, async (req: Request, res: Response): Promise<any> => {
     try {
         const requiredParams = ["text"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, req.query);
@@ -75,7 +76,7 @@ router.get("/", isAuthenticated, async (req: Request, res: Response): Promise<an
             include: {
                 Track: {
                     include: {
-                        user: true,
+                        user: { select: PUBLIC_USER },
                     },
                 },
                 likes: { select: { id: true } },

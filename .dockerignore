@@ -1,6 +1,8 @@
 .env
 node_modules
-dev.db
+**/dev.db
+prisma/data
+*.log
 uploads
 dist
 .idea

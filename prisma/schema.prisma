@@ -46,7 +46,7 @@ model Quest {
   progress    Int    @default(0)
   type        QuestType
   vehicle     Vehicle
-  user        User   @relation(fields: [userId], references: [id])
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Vehicle {
@@ -68,8 +68,8 @@ model FriendRequest {
   senderId   Int
   receiverId Int
   status     Boolean @default(false)
-  sender     User    @relation("SentRequests", fields: [senderId], references: [id])
-  receiver   User    @relation("ReceivedRequests", fields: [receiverId], references: [id])
+  sender     User    @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User    @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
 }
@@ -81,7 +81,7 @@ model Track {
   vehicle Vehicle
   posts   Post[]
   travels Travel[]
-  user    User     @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Travel {
@@ -95,7 +95,7 @@ model Travel {
   distance     Float
   vehicle      Vehicle
   Track        Track?    @relation(fields: [trackId], references: [id], onDelete: SetNull)
-  User         User     @relation(fields: [userId], references: [id])
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Post {
@@ -114,16 +114,20 @@ model Save {
   id     Int  @id @default(autoincrement())
   userId Int
   postId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
 }
 
 model Like {
   id     Int  @id @default(autoincrement())
   userId Int
   postId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
 }
 
 model Session {

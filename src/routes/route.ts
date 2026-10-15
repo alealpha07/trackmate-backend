@@ -5,7 +5,8 @@ import { haversineMeters } from "../routing/haversine";
 import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES } from "../routing/config";
 import { planRoute } from "../routing/plan";
 import { PartialDownloadError } from "../routing/data/tileCache";
-import { geocode, isGeocodingConfigured, takeGeocodeQuota } from "../routing/geocode";
+import { geocode, isGeocodingConfigured } from "../routing/geocode";
+import { geocodeLimit, planLimit, releasePlanSlot, takePlanSlot } from "../limits";
 import { LatLng, Policy, RouteFilters } from "../routing/types";
 import { isPlannable } from "../vehicles";
 
@@ -47,7 +48,7 @@ function legName(response: Response, leg: number, count: number): string {
 }
 
 // with ?stream=1 the answer is NDJSON: progress lines, then the route or an error
-router.post("/plan", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+router.post("/plan", isAuthenticated, planLimit, async (request: Request, response: Response): Promise<any> => {
     const stream = request.query.stream === "1";
     const fail = (status: number, message: string) => {
         if (!response.headersSent) return response.status(status).send(message);
@@ -96,6 +97,15 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
             }
         }
 
+        const userId = (request.user as User).id;
+        const slot = takePlanSlot(userId);
+        if (slot === "running") {
+            return response.status(429).send(response.__("route.errors.plan-running"));
+        }
+        if (slot === "busy") {
+            return response.status(503).send(response.__("route.errors.plan-busy"));
+        }
+
         // stop downloading map data when the page aborts
         const controller = new AbortController();
         const abort = () => {
@@ -126,6 +136,8 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
                 return fail(502, response.__("route.errors.map-data-partial", String(error.downloaded), String(error.total)));
             }
             return fail(502, response.__("route.errors.map-data"));
+        } finally {
+            releasePlanSlot(userId);
         }
         if ("unreachableLeg" in planned) {
             const leg = legName(response, planned.unreachableLeg, route.length);
@@ -140,7 +152,7 @@ router.post("/plan", isAuthenticated, async (request: Request, response: Respons
     }
 })
 
-router.get("/geocode", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
+router.get("/geocode", isAuthenticated, geocodeLimit, async (request: Request, response: Response): Promise<any> => {
     try {
         const requiredParams = ["text"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.query);
@@ -149,9 +161,6 @@ router.get("/geocode", isAuthenticated, async (request: Request, response: Respo
         }
         if (!isGeocodingConfigured()) {
             return response.status(503).send(response.__("route.errors.geocoding-disabled"));
-        }
-        if (!takeGeocodeQuota((request.user as User).id)) {
-            return response.status(429).send(response.__("route.errors.geocoding-limit"));
         }
 
         const focus = parseLatLng(request.query) ?? undefined;

@@ -1,17 +1,25 @@
-import express, { Request, Response } from "express";
-import bcrypt from "bcryptjs";
+import express, { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { User, Vehicle } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated } from "../utils";
-const PASSWORD_SALT = 10;
+import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER, deleteUserSessions } from "../utils";
+import { checkPassword, hashPassword, passwordProblem } from "../passportConfig";
+import { passwordLimit, registerLimit } from "../limits";
+const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,30}$/;
 const router = express.Router();
 
-router.post("/register", async (request: Request, response: Response): Promise<any> => {
+router.post("/register", registerLimit, async (request: Request, response: Response): Promise<any> => {
     try {
         const requiredParams = ["username", "password", "confirmPassword"];
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+        if (typeof sanitizedParams.username !== "string" || !USERNAME_PATTERN.test(sanitizedParams.username)) {
+            return response.status(422).send(response.__("register.errors.username"));
+        }
+        const problem = passwordProblem(sanitizedParams.password);
+        if (problem) {
+            return response.status(422).send(response.__(problem));
         }
 
         const user = await prisma.user.findUnique({ where: { username: sanitizedParams.username } });
@@ -22,11 +30,10 @@ router.post("/register", async (request: Request, response: Response): Promise<a
             return response.status(422).send(response.__("register.errors.passwords-not-match"));
         }
 
-        const hashedPassword = await bcrypt.hash(sanitizedParams.password, PASSWORD_SALT);
         await prisma.user.create({
             data: {
                 username: sanitizedParams.username,
-                password: hashedPassword,
+                password: await hashPassword(sanitizedParams.password),
                 // all vehicles by default
                 vehicles: { create: Object.values(Vehicle).map((vehicle) => ({ vehicle })) }
             }
@@ -38,19 +45,53 @@ router.post("/register", async (request: Request, response: Response): Promise<a
     }
 })
 
-router.post("/login", async (request: Request, response: Response, next) => {
-    passport.authenticate("local", (error: Error, user: User, info: any) => {
-        if (error) throw error;
+router.post("/login", passwordLimit, (request: Request, response: Response, next: NextFunction) => {
+    passport.authenticate("local", (error: Error, user: User | false, info: any) => {
+        if (error) return next(error);
         if (!user) return response.status(401).send(response.__(info.message));
         request.logIn(user, (error) => {
+            if (error) return next(error);
             response.send(response.__("login.success"));
         })
     })(request, response, next)
 })
 
+router.put("/password", isAuthenticated, passwordLimit, async (request: Request, response: Response, next: NextFunction): Promise<any> => {
+    try {
+        const requiredParams = ["oldPassword", "newPassword"];
+        const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
+        if (missingParams.length > 0) {
+            return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+        const user = request.user as User;
+        if (!(await checkPassword(user.id, sanitizedParams.oldPassword))) {
+            return response.status(403).send(response.__("auth.errors.wrong-password"));
+        }
+        const problem = passwordProblem(sanitizedParams.newPassword);
+        if (problem) {
+            return response.status(422).send(response.__(problem));
+        }
+
+        await prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(sanitizedParams.newPassword) } });
+        // logIn regenerates the session, then every other device is logged out
+        request.logIn(user, async (error) => {
+            if (error) return next(error);
+            try {
+                await deleteUserSessions(user.id, request.sessionID);
+                response.send(response.__("auth.success.password"));
+            } catch (error) {
+                next(error);
+            }
+        });
+    } catch (error) {
+        response.status(500).send(response.__("server.error"));
+        console.error(error);
+    }
+})
+
 router.get("/user", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
-        const user = await prisma.user.findUnique({ where: { id: (request.user as User).id } });
+        const user = await prisma.user.findUnique({ where: { id: (request.user as User).id }, select: PUBLIC_USER });
         response.send(user);
     } catch (error) {
         response.status(500).send(response.__("server.error"));

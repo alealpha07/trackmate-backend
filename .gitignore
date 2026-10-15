@@ -10,3 +10,4 @@ appdb
 appuploads
 cache
 appcache
+*.log

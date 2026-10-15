@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { prisma } from "./utils";
 import { dailyQuests } from "./quests";
+import { removeOrphanFiles } from "./files";
 
 export async function assignDailyQuests() {
   const users = await prisma.user.findMany({ select: { id: true, vehicles: { select: { vehicle: true } } } });
@@ -23,6 +24,15 @@ export default function initCronJob() {
       console.log("Daily quests assigned to each user!");
     } catch (error) {
       console.error("Error while updating quests:", error);
+    }
+  });
+
+  cron.schedule("30 3 * * *", async () => {
+    try {
+      const removed = await removeOrphanFiles();
+      if (removed > 0) console.log(`Removed ${removed} files left from deleted rows`);
+    } catch (error) {
+      console.error("Error while removing orphan files:", error);
     }
   });
 }

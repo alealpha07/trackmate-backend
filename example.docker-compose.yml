@@ -11,6 +11,7 @@ services:
       - ./appcache:/usr/src/app/cache
     environment:
       - DATABASE_URL=file:./data/dev.db
+      # at least 32 characters each, for example from: openssl rand -hex 32
       - SESSION_SECRET=PUT_YOUR_SESSION_SECRET
       - COOKIE_SECRET=PUT_YOUR_COOKIE_SECRET
       - PORT=3000
@@ -18,7 +19,7 @@ services:
       - ANDROID_PACKAGE_NAME=com.example.trackmate
       - ANDROID_CERT_SHA256=PUT_YOUR_APP_SIGNING_SHA256
       # comma separated, tried in order
-      - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter
+      - OVERPASS_ENDPOINT=https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter
       # tile cache limits (days, MB)
       - OSM_CACHE_TTL_DAYS=30
       - OSM_CACHE_MAX_MB=2048
@@ -29,4 +30,6 @@ services:
       - VALHALLA_CLIENT_ID=PUT_YOUR_PUBLIC_DOMAIN
       - INSTRUCTIONS_CACHE_TTL_DAYS=30
       - INSTRUCTIONS_CACHE_MAX_MB=1024
+      # route plans running at once, across all users
+      - PLAN_MAX_CONCURRENT=2
       - STADIA_API_KEY=PUT_YOUR_STADIA_API_KEY

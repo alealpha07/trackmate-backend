@@ -5,15 +5,36 @@ import { prisma } from "./utils";
 import { DoneCallback, PassportStatic } from "passport";
 import { User } from "@prisma/client";
 
+const BCRYPT_COST = 12;
+export const PASSWORD_MIN_LENGTH = 8;
+// bcrypt ignores everything after 72 bytes
+const PASSWORD_MAX_BYTES = 72;
+// unknown usernames cost a compare too, so timing doesn't tell which exist
+const DUMMY_HASH = bcrypt.hashSync("not-a-password", BCRYPT_COST);
+
+export function hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, BCRYPT_COST);
+}
+
+export async function checkPassword(userId: number, password: unknown): Promise<boolean> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    if (!user || typeof password !== "string") return false;
+    return bcrypt.compare(password, user.password);
+}
+
+// a locale key, or null when the password is fine
+export function passwordProblem(password: unknown): string | null {
+    if (typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) return "register.errors.password-short";
+    if (Buffer.byteLength(password) > PASSWORD_MAX_BYTES) return "register.errors.password-long";
+    return null;
+}
+
 function initialize(passport: PassportStatic) {
     const authenticateUser = async (username:string, password:string, done: Function) => {
         try {
             const user = await prisma.user.findUnique({ where: { username: username } });
-            if (!user) {
-                return done(null, false, { message: "auth.errors.wrong-credentials" });
-            }
-            const passwordsAreMatching = await bcrypt.compare(password, user.password);
-            if (passwordsAreMatching) {
+            const passwordsAreMatching = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
+            if (user && passwordsAreMatching) {
                 return done(null, user);
             }
             else {

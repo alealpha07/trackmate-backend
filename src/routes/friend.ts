@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import { User } from "@prisma/client";
-import { sanitizeParams, prisma, isAuthenticated } from "../utils";
+import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId, PUBLIC_USER } from "../utils";
 
 const router = express.Router();
 
@@ -13,12 +13,25 @@ router.post("/request", isAuthenticated, async (request: Request, response: Resp
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
-        await prisma.friendRequest.create({
-            data: {
-                senderId: (request.user as User).id,
-                receiverId: parseInt(sanitizedParams.id)
-            }
+        const senderId = (request.user as User).id;
+        const receiverId = parseId(sanitizedParams.id);
+        if (!receiverId) {
+            return sendInvalidId(response);
+        }
+        if (receiverId === senderId) {
+            return response.status(422).send(response.__("friend.errors.self"));
+        }
+        if (!(await prisma.user.findUnique({ where: { id: receiverId }, select: { id: true } }))) {
+            return response.status(404).send(response.__("user.errors.missing"));
+        }
+        const existing = await prisma.friendRequest.findFirst({
+            where: { OR: [{ senderId, receiverId }, { senderId: receiverId, receiverId: senderId }] }
         });
+        if (existing) {
+            return response.status(409).send(response.__("friend.errors.exists"));
+        }
+
+        await prisma.friendRequest.create({ data: { senderId, receiverId } });
         response.send(response.__("friend.success.send"));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
@@ -35,9 +48,14 @@ router.put("/request", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const senderId = parseId(sanitizedParams.id);
+        if (!senderId) {
+            return sendInvalidId(response);
+        }
+
         await prisma.friendRequest.updateMany({
             where: {
-                senderId: parseInt(sanitizedParams.id),
+                senderId,
                 receiverId: (request.user as User).id
             },
             data: {
@@ -60,9 +78,14 @@ router.patch("/request", isAuthenticated, async (request: Request, response: Res
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const senderId = parseId(sanitizedParams.id);
+        if (!senderId) {
+            return sendInvalidId(response);
+        }
+
         await prisma.friendRequest.deleteMany({
             where: {
-                senderId: parseInt(sanitizedParams.id),
+                senderId,
                 receiverId: (request.user as User).id
             }
         });
@@ -82,11 +105,16 @@ router.delete("/", isAuthenticated, async (request: Request, response: Response)
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const friendId = parseId(sanitizedParams.id);
+        if (!friendId) {
+            return sendInvalidId(response);
+        }
+
         await prisma.friendRequest.deleteMany({
             where: {
                 OR: [
-                    { senderId: (request.user as User).id, receiverId: parseInt(sanitizedParams.id) },
-                    { senderId: parseInt(sanitizedParams.id), receiverId: (request.user as User).id }
+                    { senderId: (request.user as User).id, receiverId: friendId },
+                    { senderId: friendId, receiverId: (request.user as User).id }
                 ]
             }
         });
@@ -122,7 +150,7 @@ router.get("/request/sent", isAuthenticated, async (request: Request, response: 
                 status: false
             },
             include: {
-                sender: true
+                sender: { select: PUBLIC_USER }
             }
         });
         response.send(friendRequests);
@@ -143,22 +171,36 @@ router.get("/", isAuthenticated, async (request: Request, response: Response): P
                 .send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        const userId = parseId(sanitizedParams.id);
+        if (!userId) {
+            return sendInvalidId(response);
+        }
+        const me = (request.user as User).id;
+        if (userId !== me) {
+            const friendship = await prisma.friendRequest.findFirst({
+                where: { status: true, OR: [{ senderId: me, receiverId: userId }, { senderId: userId, receiverId: me }] }
+            });
+            if (!friendship) {
+                return response.status(403).send(response.__("friend.errors.not-friend"));
+            }
+        }
+
         const friendRequests = await prisma.friendRequest.findMany({
             where: {
                 status: true,
                 OR: [
-                    { senderId: parseInt(sanitizedParams.id) },
-                    { receiverId: parseInt(sanitizedParams.id) }
+                    { senderId: userId },
+                    { receiverId: userId }
                 ],
             },
             include: {
-                sender: true,
-                receiver: true,
+                sender: { select: PUBLIC_USER },
+                receiver: { select: PUBLIC_USER },
             },
         });
 
         const friends = friendRequests.map(req =>
-            req.senderId == parseInt(sanitizedParams.id) ? req.receiver : req.sender
+            req.senderId == userId ? req.receiver : req.sender
         );
 
         return response.status(200).send(friends);
