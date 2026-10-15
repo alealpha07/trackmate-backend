@@ -25,8 +25,9 @@ npm run db:seed       # optional
 npm run dev
 ```
 
-The server listens on the port set in `.env` (3000 in the example). The seed creates three users: admin/admin,
-user/user and guest/guest. The web route planner is at http://localhost:3000/plan.
+The server listens on the port set in `.env` (3000 in the example). The seed creates three users, giulia (Parma),
+marco (Milano) and lena (Berlin), all with the password `trackmate`. Each has three tracks around their city, two
+of them posted, plus friends, likes and each other's travels. The web route planner is at http://localhost:3000/plan.
 
 ## Docker
 
