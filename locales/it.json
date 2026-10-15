@@ -1,0 +1,228 @@
+{
+	"server": {
+		"error": "Errore del server!",
+		"missing-params": "Parametri obbligatori mancanti: ",
+		"invalid-id": "Id non valido!",
+		"too-many-requests": "Troppe richieste, aspetta un po' e riprova!",
+		"too-large": "La richiesta è troppo grande!",
+		"bad-request": "Richiesta non valida!"
+	},
+	"register": {
+		"success": "Utente creato con successo!",
+		"errors": {
+			"username-taken": "Nome utente già in uso!",
+			"passwords-not-match": "Le password non coincidono!",
+			"username": "Il nome utente deve avere da 3 a 30 lettere, cifre, punti, trattini o trattini bassi!",
+			"password-short": "La password deve essere lunga almeno 8 caratteri!",
+			"password-long": "La password è troppo lunga!"
+		}
+	},
+	"login": {
+		"success": "Accesso effettuato con successo!"
+	},
+	"logout": {
+		"success": "Disconnessione effettuata con successo!"
+	},
+	"auth": {
+		"success": {
+			"password": "Password cambiata con successo!"
+		},
+		"errors": {
+			"unauthorized": "Utente non autenticato!",
+			"wrong-credentials": "Credenziali errate!",
+			"wrong-password": "Password errata!",
+			"too-many-attempts": "Troppi tentativi errati, riprova tra 15 minuti!"
+		}
+	},
+	"user": {
+		"success": {
+			"update": "Utente aggiornato con successo!",
+			"vehicles": "Veicoli aggiornati con successo!",
+			"delete": "Account eliminato con successo!"
+		},
+		"errors": {
+			"missing": "Utente non trovato!",
+			"vehicle": "Veicolo non supportato!",
+			"no-vehicles": "Tieni almeno un veicolo!",
+			"bio-long": "La bio può essere lunga al massimo %s caratteri!"
+		}
+	},
+	"track": {
+		"success": {
+			"create": "Percorso creato con successo!",
+			"update": "Percorso aggiornato con successo!",
+			"delete": "Percorso eliminato con successo!",
+			"travel": "Viaggio salvato con successo!",
+			"travel-delete": "Viaggio eliminato con successo!"
+		},
+		"errors": {
+			"missing": "Percorso non trovato!",
+			"not-owner": "Solo il proprietario può modificare questo percorso!",
+			"vehicle": "Veicolo non supportato!",
+			"vehicle-class": "Questo veicolo non può percorrere questo percorso!",
+			"vehicle-class-locked": "Altri utenti hanno percorso questo percorso: tieni un veicolo dello stesso tipo!",
+			"hidden": "Questo percorso non è disponibile: è privato!",
+			"file": "File del percorso non valido!",
+			"travel-missing": "Viaggio non trovato!",
+			"travel-not-owner": "Solo il proprietario può modificare questo viaggio!"
+		}
+	},
+	"friend": {
+		"success": {
+			"send": "Richiesta di amicizia inviata con successo!",
+			"accept": "Richiesta di amicizia accettata con successo!",
+			"refuse": "Richiesta di amicizia rifiutata con successo!",
+			"remove": "Amico rimosso con successo!"
+		},
+		"errors": {
+			"self": "Non puoi aggiungere te stesso come amico!",
+			"exists": "C'è già una richiesta di amicizia tra di voi!",
+			"not-friend": "Solo gli amici possono vedere questa lista!"
+		}
+	},
+	"post": {
+		"success": {
+			"create": "Post creato con successo!",
+			"update": "Post aggiornato con successo!",
+			"delete": "Post eliminato con successo!",
+			"like": "Post aggiunto ai preferiti con successo!",
+			"unlike": "Post rimosso dai preferiti con successo!",
+			"save": "Post salvato con successo!",
+			"unsave": "Post rimosso dai salvati con successo!"
+		},
+		"errors": {
+			"missing": "Post mancante!",
+			"not-owner": "Solo l'autore può modificare questo post!"
+		}
+	},
+	"quest": {
+		"success": {
+			"collect": "Missione completata con successo!",
+			"update": "Missione aggiornata con successo!"
+		},
+		"errors": {
+			"missing": "Missione mancante!",
+			"uncompleted": "Missione non completata!",
+			"progress": "Avanzamento della missione non valido!"
+		},
+		"text": {
+			"distance": {
+				"car": "Guida per %s km in auto",
+				"motorcycle": "Percorri %s km in moto",
+				"bicycle": "Pedala per %s km in bici",
+				"foot": "Cammina per %s km"
+			},
+			"navigate": {
+				"car": {
+					"one": "Naviga %s percorso in auto",
+					"other": "Naviga %s percorsi in auto"
+				},
+				"motorcycle": {
+					"one": "Naviga %s percorso in moto",
+					"other": "Naviga %s percorsi in moto"
+				},
+				"bicycle": {
+					"one": "Naviga %s percorso in bici",
+					"other": "Naviga %s percorsi in bici"
+				},
+				"foot": {
+					"one": "Naviga %s percorso a piedi",
+					"other": "Naviga %s percorsi a piedi"
+				}
+			},
+			"record": {
+				"car": {
+					"one": "Registra %s percorso in auto",
+					"other": "Registra %s percorsi in auto"
+				},
+				"motorcycle": {
+					"one": "Registra %s percorso in moto",
+					"other": "Registra %s percorsi in moto"
+				},
+				"bicycle": {
+					"one": "Registra %s percorso in bici",
+					"other": "Registra %s percorsi in bici"
+				},
+				"foot": {
+					"one": "Registra %s percorso a piedi",
+					"other": "Registra %s percorsi a piedi"
+				}
+			}
+		}
+	},
+	"file": {
+		"success": {
+			"upload": "File caricato con successo!",
+			"delete": "File eliminato con successo!"
+		},
+		"errors": {
+			"missing": "Errore, file mancante!",
+			"invalid": "File non valido, è consentita una sola immagine!",
+			"too-large": "Il file è troppo grande!"
+		}
+	},
+	"route": {
+		"errors": {
+			"coordinates": "Coordinate non valide per la partenza, una tappa o la destinazione!",
+			"vehicle": "Veicolo non supportato!",
+			"policy": "Criterio di percorso non supportato!",
+			"filters": "Filtri di percorso non supportati!",
+			"max-detour": "La lunghezza extra massima deve essere una percentuale tra 1 e 1000!",
+			"leg-too-far": "La tratta %s è di %s km in linea d'aria: tra due punti consecutivi sono consentiti al massimo %s km!",
+			"no-route-leg": "Nessun percorso trovato per la tratta %s!",
+			"map-data-partial": "Dati della mappa scaricati solo in parte (%s di %s aree). Pianifica di nuovo per continuare il download!",
+			"map-data": "I dati della mappa sono momentaneamente non disponibili, riprova più tardi!",
+			"geocoding": "La ricerca dei luoghi è momentaneamente non disponibile, riprova più tardi!",
+			"geocoding-disabled": "La ricerca dei luoghi non è configurata su questo server!",
+			"geocoding-limit": "Troppe ricerche, aspetta un minuto e riprova!",
+			"instructions": "Le indicazioni passo passo sono momentaneamente non disponibili, riprova più tardi!",
+			"instructions-timeout": "Le indicazioni passo passo hanno richiesto troppo tempo, riprova più tardi!",
+			"instructions-no-match": "Questo percorso non segue abbastanza da vicino strade conosciute per le indicazioni passo passo!",
+			"instructions-too-long": "Questo percorso è troppo lungo per le indicazioni passo passo!",
+			"plan-running": "Stai già pianificando un percorso, aspetta che finisca!",
+			"plan-busy": "Il pianificatore è occupato, riprova tra un minuto!",
+			"plan-limit": "Troppi percorsi pianificati, aspetta qualche minuto e riprova!"
+		},
+		"points": {
+			"start": "partenza",
+			"stop": "tappa %s",
+			"end": "destinazione"
+		}
+	},
+	"id": "id",
+	"bio": "bio",
+	"text": "testo",
+	"Missing credentials": "Credenziali mancanti",
+	"start": "partenza",
+	"end": "arrivo",
+	"vehicle": "veicolo",
+	"policy": "criterio",
+	"name": "nome",
+	"vehicles": "veicoli",
+	"type": "tipo",
+	"progress": "avanzamento",
+	"oldPassword": "vecchia password",
+	"newPassword": "nuova password",
+	"password": "password",
+	"username": "nome utente",
+	"confirmPassword": "conferma password",
+	"title": "titolo",
+	"description": "descrizione",
+	"offset": "offset",
+	"index": "indice",
+	"time": "tempo",
+	"averageSpeed": "velocità media",
+	"maxSpeed": "velocità massima",
+	"distance": "distanza",
+	"share": {
+		"not-found-title": "Post non trovato",
+		"not-found-body": "Questo post potrebbe essere stato eliminato.",
+		"shared-by": "Un percorso condiviso da %s",
+		"likes": {
+			"one": "%s mi piace",
+			"other": "%s mi piace"
+		},
+		"open": "Apri in TrackMate",
+		"hint": "Installa l'app TrackMate per percorrere questo percorso e vedere il post completo."
+	}
+}

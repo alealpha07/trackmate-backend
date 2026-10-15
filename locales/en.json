@@ -1,7 +1,7 @@
 {
 	"server": {
 		"error": "Server error!",
-		"missing-params": "Missing required paramiters: ",
+		"missing-params": "Missing required parameters: ",
 		"invalid-id": "Invalid id!",
 		"too-many-requests": "Too many requests, wait a bit and try again!",
 		"too-large": "The request is too large!",
@@ -104,6 +104,50 @@
 			"missing": "Quest missing!",
 			"uncompleted": "Quest not completed!",
 			"progress": "Invalid quest progress!"
+		},
+		"text": {
+			"distance": {
+				"car": "Drive %s km by car",
+				"motorcycle": "Ride %s km by motorcycle",
+				"bicycle": "Ride %s km by bicycle",
+				"foot": "Walk %s km"
+			},
+			"navigate": {
+				"car": {
+					"one": "Navigate %s track by car",
+					"other": "Navigate %s tracks by car"
+				},
+				"motorcycle": {
+					"one": "Navigate %s track by motorcycle",
+					"other": "Navigate %s tracks by motorcycle"
+				},
+				"bicycle": {
+					"one": "Navigate %s track by bicycle",
+					"other": "Navigate %s tracks by bicycle"
+				},
+				"foot": {
+					"one": "Navigate %s track on foot",
+					"other": "Navigate %s tracks on foot"
+				}
+			},
+			"record": {
+				"car": {
+					"one": "Record %s track by car",
+					"other": "Record %s tracks by car"
+				},
+				"motorcycle": {
+					"one": "Record %s track by motorcycle",
+					"other": "Record %s tracks by motorcycle"
+				},
+				"bicycle": {
+					"one": "Record %s track by bicycle",
+					"other": "Record %s tracks by bicycle"
+				},
+				"foot": {
+					"one": "Record %s track on foot",
+					"other": "Record %s tracks on foot"
+				}
+			}
 		}
 	},
 	"file": {
@@ -169,5 +213,16 @@
 	"time": "time",
 	"averageSpeed": "average speed",
 	"maxSpeed": "max speed",
-	"distance": "distance"
+	"distance": "distance",
+	"share": {
+		"not-found-title": "Post not found",
+		"not-found-body": "This post may have been deleted.",
+		"shared-by": "A track shared by %s",
+		"likes": {
+			"one": "%s like",
+			"other": "%s likes"
+		},
+		"open": "Open in TrackMate",
+		"hint": "Install the TrackMate app to ride this track and see the full post."
+	}
 }

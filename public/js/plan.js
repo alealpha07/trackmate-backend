@@ -1,5 +1,8 @@
 import * as maplibregl from "/vendor/maplibre-gl/maplibre-gl.mjs";
-import { api, apiStream, applyTranslations, t } from "./common.js";
+import {
+    api, apiStream, applyTranslations, t, LANGUAGE, LANGUAGES, THEMES, savedLanguage, saveLanguage, savedTheme,
+    saveTheme, isDarkTheme, onSystemThemeChange,
+} from "./common.js";
 
 applyTranslations();
 
@@ -28,13 +31,17 @@ const ATTRIBUTION = '&copy; <a href="https://openmaptiles.org/" target="_blank">
 // osm allows a folded credit if it starts open and folds on the first touch or after a few seconds
 const ATTRIBUTION_COLLAPSE_MS = 5000;
 const MAP_STYLES = [
+    { id: "auto", label: "plan.styleAuto" },
     { id: "outdoors", label: "plan.styleOutdoors" },
     { id: "osm_bright", label: "plan.styleStreets" },
     { id: "alidade_smooth", label: "plan.styleLight" },
     { id: "alidade_smooth_dark", label: "plan.styleDark" },
 ];
 const MAP_STYLE_KEY = "trackmate.mapStyle";
+const AUTO_STYLES = { light: "outdoors", dark: "alidade_smooth_dark" };
+const THEME_LABELS = { system: "plan.themeSystem", light: "plan.themeLight", dark: "plan.themeDark" };
 // same icons as the app
+const SETTINGS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z"/></svg>';
 const LAYERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>';
 const LOCATION_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>';
 const COMPASS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="north" d="M12 2.5 15.5 12h-7z"/><path class="south" d="M12 21.5 15.5 12h-7z"/><circle class="pivot" cx="12" cy="12" r="1.3"/></svg>';
@@ -47,6 +54,12 @@ function savedMapStyle() {
     } catch {
         return MAP_STYLES[0].id;
     }
+}
+
+function shownMapStyle() {
+    const style = savedMapStyle();
+    if (style !== "auto") return style;
+    return isDarkTheme() ? AUTO_STYLES.dark : AUTO_STYLES.light;
 }
 
 function tileUrls(style) {
@@ -67,7 +80,7 @@ const map = new maplibregl.Map({
     style: {
         version: 8,
         sources: {
-            basemap: { type: "raster", tiles: tileUrls(savedMapStyle()), tileSize: 256, maxzoom: 20, attribution: ATTRIBUTION },
+            basemap: { type: "raster", tiles: tileUrls(shownMapStyle()), tileSize: 256, maxzoom: 20, attribution: ATTRIBUTION },
             route: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
             connectors: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
         },
@@ -107,54 +120,49 @@ class ButtonControl {
     onRemove() {}
 }
 
-// compass only shows when the map is rotated or tilted
-const compass = new ButtonControl("compass", t("plan.north"), COMPASS_ICON, () => map.easeTo({ bearing: 0, pitch: 0 }));
-map.addControl(compass, "top-right");
-function updateCompass() {
-    compass.container.hidden = map.getBearing() === 0 && map.getPitch() === 0;
-    compass.button.firstChild.style.transform = `rotate(${-map.getBearing()}deg)`;
-}
-map.on("rotate", updateCompass);
-map.on("pitch", updateCompass);
-updateCompass();
+// a map button that opens a card of radio groups
+class MenuControl {
+    constructor(className, label, icon, groups) {
+        this.className = className;
+        this.label = label;
+        this.icon = icon;
+        this.groups = groups;
+    }
 
-class LayersControl {
     onAdd() {
         const container = document.createElement("div");
-        container.className = "maplibregl-ctrl maplibregl-ctrl-group layers";
+        container.className = `maplibregl-ctrl maplibregl-ctrl-group menu-control ${this.className}`;
 
         const button = document.createElement("button");
         button.type = "button";
-        button.title = t("plan.mapStyle");
-        button.setAttribute("aria-label", t("plan.mapStyle"));
+        button.title = this.label;
+        button.setAttribute("aria-label", this.label);
         button.setAttribute("aria-expanded", "false");
-        button.innerHTML = LAYERS_ICON;
+        button.innerHTML = this.icon;
 
         const menu = document.createElement("div");
-        menu.className = "layers-menu card";
-        menu.setAttribute("role", "radiogroup");
-        menu.setAttribute("aria-label", t("plan.mapStyle"));
+        menu.className = "control-menu card";
         menu.hidden = true;
-        const title = document.createElement("p");
-        title.textContent = t("plan.mapStyle");
-        menu.append(title);
-        const current = savedMapStyle();
-        for (const style of MAP_STYLES) {
-            const label = document.createElement("label");
-            const radio = document.createElement("input");
-            radio.type = "radio";
-            radio.name = "map-style";
-            radio.value = style.id;
-            radio.checked = style.id === current;
-            radio.addEventListener("change", () => {
-                map.getSource("basemap").setTiles(tileUrls(style.id));
-                try {
-                    localStorage.setItem(MAP_STYLE_KEY, style.id);
-                } catch {}
-                toggle(false);
-            });
-            label.append(radio, t(style.label));
-            menu.append(label);
+        for (const group of this.groups) {
+            const fieldset = document.createElement("fieldset");
+            const legend = document.createElement("legend");
+            legend.textContent = group.title;
+            fieldset.append(legend);
+            for (const option of group.options) {
+                const label = document.createElement("label");
+                const radio = document.createElement("input");
+                radio.type = "radio";
+                radio.name = group.name;
+                radio.value = option.id;
+                radio.checked = option.id === group.current;
+                radio.addEventListener("change", () => {
+                    group.onChange(option.id);
+                    toggle(false);
+                });
+                label.append(radio, option.label);
+                fieldset.append(label);
+            }
+            menu.append(fieldset);
         }
 
         const toggle = (open) => {
@@ -175,7 +183,62 @@ class LayersControl {
 
     onRemove() {}
 }
-map.addControl(new LayersControl(), "top-right");
+
+map.addControl(new MenuControl("settings", t("plan.settings"), SETTINGS_ICON, [
+    {
+        name: "theme",
+        title: t("plan.theme"),
+        options: THEMES.map((theme) => ({ id: theme, label: t(THEME_LABELS[theme]) })),
+        current: savedTheme(),
+        onChange: (theme) => {
+            saveTheme(theme);
+            updateBasemap();
+        },
+    },
+    {
+        name: "language",
+        title: t("plan.language"),
+        options: [{ id: "system", label: t("plan.languageSystem") }, ...LANGUAGES.map(({ id, name }) => ({ id, label: name }))],
+        current: savedLanguage() ?? "system",
+        onChange: (id) => {
+            saveLanguage(id === "system" ? null : id);
+            // every string is rendered once, so start over in the new language
+            location.reload();
+        },
+    },
+]), "top-right");
+
+// compass only shows when the map is rotated or tilted
+const compass = new ButtonControl("compass", t("plan.north"), COMPASS_ICON, () => map.easeTo({ bearing: 0, pitch: 0 }));
+map.addControl(compass, "top-right");
+function updateCompass() {
+    compass.container.hidden = map.getBearing() === 0 && map.getPitch() === 0;
+    compass.button.firstChild.style.transform = `rotate(${-map.getBearing()}deg)`;
+}
+map.on("rotate", updateCompass);
+map.on("pitch", updateCompass);
+updateCompass();
+
+map.addControl(new MenuControl("layers", t("plan.mapStyle"), LAYERS_ICON, [{
+    name: "map-style",
+    title: t("plan.mapStyle"),
+    options: MAP_STYLES.map((style) => ({ id: style.id, label: t(style.label) })),
+    current: savedMapStyle(),
+    onChange: (id) => {
+        try {
+            localStorage.setItem(MAP_STYLE_KEY, id);
+        } catch {}
+        updateBasemap();
+    },
+}]), "top-right");
+
+let basemapStyle = shownMapStyle();
+function updateBasemap() {
+    if (shownMapStyle() === basemapStyle) return;
+    basemapStyle = shownMapStyle();
+    map.getSource("basemap").setTiles(tileUrls(basemapStyle));
+}
+onSystemThemeChange(updateBasemap);
 
 const myLocationMarker = new maplibregl.Marker({ element: Object.assign(document.createElement("div"), { className: "my-location" }) });
 
@@ -330,7 +393,7 @@ function routeProblem() {
         if (meters > MAX_LEG_METERS) {
             rows[i].element.classList.add("too-far");
             rows[i + 1].element.classList.add("too-far");
-            const km = new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(meters / 1000);
+            const km = new Intl.NumberFormat(LANGUAGE, { maximumFractionDigits: 1 }).format(meters / 1000);
             return t("plan.legTooFar", rowName(i), rowName(i + 1), km);
         }
     }
@@ -371,7 +434,7 @@ function showStatus(text, isError = false) {
 }
 
 function formatDistance(meters) {
-    const km = new Intl.NumberFormat("en", { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(meters / 1000);
+    const km = new Intl.NumberFormat(LANGUAGE, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(meters / 1000);
     return `${km} km`;
 }
 

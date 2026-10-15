@@ -9,7 +9,7 @@ The API behind the Trackmate Android app, plus the web route planner. For what t
 - Prisma 7 with SQLite (better-sqlite3 driver adapter)
 - Passport for login sessions
 - OpenStreetMap data from Overpass, Copernicus elevation data, Stadia Maps and Photon for place search
-- Web planner in plain HTML, CSS and JavaScript, with MapLibre GL
+- Web planner in plain HTML, CSS and JavaScript, with MapLibre GL, light and dark, in English, Italian and German
 
 ## Development
 

@@ -161,7 +161,7 @@ router.get("/instructions", isAuthenticated, instructionsLimit, async (request: 
             return response.status(404).send(response.__("file.errors.missing"));
         }
 
-        const language = valhallaLanguage(request.query.lang);
+        const language = valhallaLanguage(request.query.lang ?? response.getLocale());
         try {
             const instructions = await trackInstructions({
                 trackId: track.id,

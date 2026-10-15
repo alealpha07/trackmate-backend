@@ -19,8 +19,73 @@
     --radius: 4px;
     --shadow: 0 2px 1px -1px rgba(0, 0, 0, .2), 0 1px 1px rgba(0, 0, 0, .14), 0 1px 3px rgba(0, 0, 0, .12);
     --shadow-raised: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px rgba(0, 0, 0, .14), 0 1px 18px rgba(0, 0, 0, .12);
+    --app-bar: var(--primary);
+    --on-app-bar: #ffffff;
+    --control: #ffffff;
+    --control-hover: #eeeeee;
+    --control-icon: #212121;
+    --credit: #ffffff;
+    --on-credit: rgba(0, 0, 0, .75);
+    --icon-filter: none;
     --font: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme: light;
+}
+/* same tokens twice: once for the system setting, once for the picker */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --primary: #60c3ca;
+        --primary-dark: #8fd6db;
+        --primary-text: #60c3ca;
+        --primary-tint: rgba(96, 195, 202, .16);
+        --on-primary: #00363a;
+        --heading: #c5cae9;
+        --bg: #121212;
+        --surface: #1e1e1e;
+        --field: rgba(255, 255, 255, .06);
+        --text: #e6e6e6;
+        --muted: #a3a3a3;
+        --divider: #3a3a3a;
+        --field-line: rgba(255, 255, 255, .5);
+        --error: #cf6679;
+        --shadow: 0 2px 1px -1px rgba(0, 0, 0, .5), 0 1px 1px rgba(0, 0, 0, .4), 0 1px 3px rgba(0, 0, 0, .4);
+        --shadow-raised: 0 3px 5px -1px rgba(0, 0, 0, .5), 0 6px 10px rgba(0, 0, 0, .4), 0 1px 18px rgba(0, 0, 0, .4);
+        --app-bar: #036b70;
+        --on-app-bar: #ffffff;
+        --control: #2c2c2c;
+        --control-hover: #3a3a3a;
+        --control-icon: #e6e6e6;
+        --credit: #2c2c2c;
+        --on-credit: rgba(255, 255, 255, .8);
+        --icon-filter: invert(1);
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --primary: #60c3ca;
+    --primary-dark: #8fd6db;
+    --primary-text: #60c3ca;
+    --primary-tint: rgba(96, 195, 202, .16);
+    --on-primary: #00363a;
+    --heading: #c5cae9;
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --field: rgba(255, 255, 255, .06);
+    --text: #e6e6e6;
+    --muted: #a3a3a3;
+    --divider: #3a3a3a;
+    --field-line: rgba(255, 255, 255, .5);
+    --error: #cf6679;
+    --shadow: 0 2px 1px -1px rgba(0, 0, 0, .5), 0 1px 1px rgba(0, 0, 0, .4), 0 1px 3px rgba(0, 0, 0, .4);
+    --shadow-raised: 0 3px 5px -1px rgba(0, 0, 0, .5), 0 6px 10px rgba(0, 0, 0, .4), 0 1px 18px rgba(0, 0, 0, .4);
+    --app-bar: #036b70;
+    --on-app-bar: #ffffff;
+    --control: #2c2c2c;
+    --control-hover: #3a3a3a;
+    --control-icon: #e6e6e6;
+    --credit: #2c2c2c;
+    --on-credit: rgba(255, 255, 255, .8);
+    --icon-filter: invert(1);
+    color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.4; }
@@ -29,7 +94,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .card { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 
 .app-bar { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px;
-           background: var(--primary); color: var(--on-primary); }
+           background: var(--app-bar); color: var(--on-app-bar); }
 .app-bar .app-icon { width: 32px; height: 32px; border-radius: var(--radius); }
 .app-bar h1 { flex: 1; margin: 0; font-size: 1.25rem; font-weight: 500; }
 
@@ -44,7 +109,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .text-button { padding: 6px 8px; border: 0; border-radius: var(--radius); background: none; color: var(--primary-text);
                font: 500 .875rem/1.4 var(--font); letter-spacing: .09em; text-transform: uppercase; cursor: pointer; }
 .text-button:hover { background: var(--primary-tint); }
-.app-bar .text-button { color: var(--on-primary); }
+.app-bar .text-button { color: var(--on-app-bar); }
 .app-bar .text-button:hover { background: rgba(255, 255, 255, .16); }
 .icon-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0;
                border: 2px solid var(--primary); border-radius: 50%; background: none; color: var(--primary-text);

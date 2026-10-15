@@ -46,6 +46,7 @@ i18n.configure({
     locales: LOCALES,
     directory: LOCALES_DIRECTORY,
     defaultLocale: "en",
+    retryInDefaultLocale: true,
     queryParameter: "lang",
     autoReload: true,
     syncFiles: true,

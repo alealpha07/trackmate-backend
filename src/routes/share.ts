@@ -72,8 +72,9 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
         const post = id ? await findSharedPost(id) : null;
         if (!post) {
             return res.status(404).type("html").send(renderPage({
-                title: "Post not found · TrackMate",
-                body: `<div class="card empty"><h2>Post not found</h2><p>This post may have been deleted.</p></div>`,
+                lang: res.getLocale(),
+                title: `${res.__("share.not-found-title")} · TrackMate`,
+                body: `<div class="card empty"><h2>${res.__("share.not-found-title")}</h2><p>${res.__("share.not-found-body")}</p></div>`,
             }));
         }
 
@@ -88,13 +89,14 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
         const appUrl = `intent://${req.get("host")}/p/${post.id}#Intent;scheme=https;package=${ANDROID_PACKAGE_NAME};end`;
 
         res.type("html").send(renderPage({
+            lang: res.getLocale(),
             title: `${title} · TrackMate`,
             meta: `
     <meta name="description" content="${description}">
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="TrackMate">
     <meta property="og:title" content="${title}">
-    <meta property="og:description" content="${description || `A track shared by ${username}`}">
+    <meta property="og:description" content="${description || res.__("share.shared-by", username)}">
     <meta property="og:url" content="${pageUrl}">
     ${imageUrl ? `<meta property="og:image" content="${imageUrl}">` : ""}
     <meta name="twitter:card" content="${imageUrl ? "summary_large_image" : "summary"}">`,
@@ -104,10 +106,10 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
         <h2>${title}</h2>
         ${imageUrl ? `<img class="cover" src="${imageUrl}" alt="${title}">` : ""}
         <div class="content">
-            <p class="likes">${likes} ${likes === 1 ? "like" : "likes"}</p>
+            <p class="likes">${res.__n("share.likes", likes)}</p>
             ${description ? `<p class="description">${description}</p>` : ""}
-            <a class="button open" href="${appUrl}">${NAVIGATION_ICON}<span>Open in TrackMate</span></a>
-            <p class="hint">Install the TrackMate app to ride this track and see the full post.</p>
+            <a class="button open" href="${appUrl}">${NAVIGATION_ICON}<span>${res.__("share.open")}</span></a>
+            <p class="hint">${res.__("share.hint")}</p>
         </div>
     </article>`,
         }));
@@ -121,8 +123,8 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
 const PERSON_AVATAR = `<span class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>`;
 const NAVIGATION_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>`;
 
-const renderPage = ({ title, meta = "", body }: { title: string; meta?: string; body: string }) => `<!DOCTYPE html>
-<html lang="en">
+const renderPage = ({ lang, title, meta = "", body }: { lang: string; title: string; meta?: string; body: string }) => `<!DOCTYPE html>
+<html lang="${lang}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -133,6 +135,7 @@ const renderPage = ({ title, meta = "", body }: { title: string; meta?: string; 
     <link rel="stylesheet" href="/vendor/roboto/500.css">
     <link rel="stylesheet" href="/vendor/roboto/700.css">
     <link rel="stylesheet" href="/theme.css">
+    <script src="/js/theme-init.js"></script>
     <style>
         main { display: flex; justify-content: center; padding: 24px 16px; }
         .card { width: 100%; max-width: 480px; }

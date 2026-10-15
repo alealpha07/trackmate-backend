@@ -1,4 +1,5 @@
-import { QuestType, Vehicle } from "./generated/prisma/client.js";
+import { Response } from "express";
+import { Quest, QuestType, Vehicle } from "./generated/prisma/client.js";
 
 export const QUESTS_PER_VEHICLE = 2;
 
@@ -62,6 +63,19 @@ export function questPool(vehicle: Vehicle): QuestTemplate[] {
             vehicle,
         })),
     ];
+}
+
+// the stored description is english, this follows the request language
+export function questText(quest: Pick<Quest, "type" | "vehicle" | "maxProgress">, response: Response): string {
+    const vehicle = quest.vehicle.toLowerCase();
+    switch (quest.type) {
+        case QuestType.TRAVEL_DISTANCE:
+            return response.__(`quest.text.distance.${vehicle}`, String(quest.maxProgress));
+        case QuestType.NAVIGATE_TRACK:
+            return response.__n(`quest.text.navigate.${vehicle}`, quest.maxProgress);
+        case QuestType.RECORD_TRACK:
+            return response.__n(`quest.text.record.${vehicle}`, quest.maxProgress);
+    }
 }
 
 export function dailyQuests(vehicles: Vehicle[]): QuestTemplate[] {

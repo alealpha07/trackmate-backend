@@ -1,0 +1,228 @@
+{
+	"server": {
+		"error": "Serverfehler!",
+		"missing-params": "Fehlende Pflichtparameter: ",
+		"invalid-id": "Ungültige ID!",
+		"too-many-requests": "Zu viele Anfragen, warte kurz und versuche es erneut!",
+		"too-large": "Die Anfrage ist zu groß!",
+		"bad-request": "Ungültige Anfrage!"
+	},
+	"register": {
+		"success": "Benutzer erfolgreich erstellt!",
+		"errors": {
+			"username-taken": "Benutzername bereits vergeben!",
+			"passwords-not-match": "Die Passwörter stimmen nicht überein!",
+			"username": "Der Benutzername muss aus 3 bis 30 Buchstaben, Ziffern, Punkten, Bindestrichen oder Unterstrichen bestehen!",
+			"password-short": "Das Passwort muss mindestens 8 Zeichen lang sein!",
+			"password-long": "Das Passwort ist zu lang!"
+		}
+	},
+	"login": {
+		"success": "Erfolgreich angemeldet!"
+	},
+	"logout": {
+		"success": "Erfolgreich abgemeldet!"
+	},
+	"auth": {
+		"success": {
+			"password": "Passwort erfolgreich geändert!"
+		},
+		"errors": {
+			"unauthorized": "Benutzer ist nicht angemeldet!",
+			"wrong-credentials": "Falsche Anmeldedaten!",
+			"wrong-password": "Falsches Passwort!",
+			"too-many-attempts": "Zu viele Fehlversuche, versuche es in 15 Minuten erneut!"
+		}
+	},
+	"user": {
+		"success": {
+			"update": "Benutzer erfolgreich aktualisiert!",
+			"vehicles": "Fahrzeuge erfolgreich aktualisiert!",
+			"delete": "Konto erfolgreich gelöscht!"
+		},
+		"errors": {
+			"missing": "Benutzer nicht gefunden!",
+			"vehicle": "Fahrzeug wird nicht unterstützt!",
+			"no-vehicles": "Behalte mindestens ein Fahrzeug!",
+			"bio-long": "Die Bio darf höchstens %s Zeichen lang sein!"
+		}
+	},
+	"track": {
+		"success": {
+			"create": "Strecke erfolgreich erstellt!",
+			"update": "Strecke erfolgreich aktualisiert!",
+			"delete": "Strecke erfolgreich gelöscht!",
+			"travel": "Fahrt erfolgreich gespeichert!",
+			"travel-delete": "Fahrt erfolgreich gelöscht!"
+		},
+		"errors": {
+			"missing": "Strecke nicht gefunden!",
+			"not-owner": "Nur der Besitzer kann diese Strecke ändern!",
+			"vehicle": "Fahrzeug wird nicht unterstützt!",
+			"vehicle-class": "Dieses Fahrzeug kann diese Strecke nicht fahren!",
+			"vehicle-class-locked": "Andere Benutzer sind diese Strecke gefahren: behalte ein Fahrzeug der gleichen Art!",
+			"hidden": "Diese Strecke ist nicht verfügbar: sie ist privat!",
+			"file": "Ungültige Streckendatei!",
+			"travel-missing": "Fahrt nicht gefunden!",
+			"travel-not-owner": "Nur der Besitzer kann diese Fahrt ändern!"
+		}
+	},
+	"friend": {
+		"success": {
+			"send": "Freundschaftsanfrage erfolgreich gesendet!",
+			"accept": "Freundschaftsanfrage erfolgreich angenommen!",
+			"refuse": "Freundschaftsanfrage erfolgreich abgelehnt!",
+			"remove": "Freund erfolgreich entfernt!"
+		},
+		"errors": {
+			"self": "Du kannst dich nicht selbst als Freund hinzufügen!",
+			"exists": "Zwischen euch gibt es bereits eine Freundschaftsanfrage!",
+			"not-friend": "Nur Freunde können diese Liste sehen!"
+		}
+	},
+	"post": {
+		"success": {
+			"create": "Beitrag erfolgreich erstellt!",
+			"update": "Beitrag erfolgreich aktualisiert!",
+			"delete": "Beitrag erfolgreich gelöscht!",
+			"like": "Beitrag erfolgreich zu den Favoriten hinzugefügt!",
+			"unlike": "Beitrag erfolgreich aus den Favoriten entfernt!",
+			"save": "Beitrag erfolgreich gespeichert!",
+			"unsave": "Beitrag erfolgreich aus den Gespeicherten entfernt!"
+		},
+		"errors": {
+			"missing": "Beitrag fehlt!",
+			"not-owner": "Nur der Autor kann diesen Beitrag ändern!"
+		}
+	},
+	"quest": {
+		"success": {
+			"collect": "Quest erfolgreich abgeschlossen!",
+			"update": "Quest erfolgreich aktualisiert!"
+		},
+		"errors": {
+			"missing": "Quest fehlt!",
+			"uncompleted": "Quest nicht abgeschlossen!",
+			"progress": "Ungültiger Quest-Fortschritt!"
+		},
+		"text": {
+			"distance": {
+				"car": "Fahre %s km mit dem Auto",
+				"motorcycle": "Fahre %s km mit dem Motorrad",
+				"bicycle": "Fahre %s km mit dem Fahrrad",
+				"foot": "Gehe %s km zu Fuß"
+			},
+			"navigate": {
+				"car": {
+					"one": "Navigiere %s Strecke mit dem Auto",
+					"other": "Navigiere %s Strecken mit dem Auto"
+				},
+				"motorcycle": {
+					"one": "Navigiere %s Strecke mit dem Motorrad",
+					"other": "Navigiere %s Strecken mit dem Motorrad"
+				},
+				"bicycle": {
+					"one": "Navigiere %s Strecke mit dem Fahrrad",
+					"other": "Navigiere %s Strecken mit dem Fahrrad"
+				},
+				"foot": {
+					"one": "Navigiere %s Strecke zu Fuß",
+					"other": "Navigiere %s Strecken zu Fuß"
+				}
+			},
+			"record": {
+				"car": {
+					"one": "Zeichne %s Strecke mit dem Auto auf",
+					"other": "Zeichne %s Strecken mit dem Auto auf"
+				},
+				"motorcycle": {
+					"one": "Zeichne %s Strecke mit dem Motorrad auf",
+					"other": "Zeichne %s Strecken mit dem Motorrad auf"
+				},
+				"bicycle": {
+					"one": "Zeichne %s Strecke mit dem Fahrrad auf",
+					"other": "Zeichne %s Strecken mit dem Fahrrad auf"
+				},
+				"foot": {
+					"one": "Zeichne %s Strecke zu Fuß auf",
+					"other": "Zeichne %s Strecken zu Fuß auf"
+				}
+			}
+		}
+	},
+	"file": {
+		"success": {
+			"upload": "Datei erfolgreich hochgeladen!",
+			"delete": "Datei erfolgreich gelöscht!"
+		},
+		"errors": {
+			"missing": "Fehler, Datei fehlt!",
+			"invalid": "Ungültige Datei, nur ein Bild ist erlaubt!",
+			"too-large": "Die Datei ist zu groß!"
+		}
+	},
+	"route": {
+		"errors": {
+			"coordinates": "Ungültige Koordinaten für den Start, einen Zwischenstopp oder das Ziel!",
+			"vehicle": "Fahrzeug wird nicht unterstützt!",
+			"policy": "Routenmodus wird nicht unterstützt!",
+			"filters": "Routenfilter werden nicht unterstützt!",
+			"max-detour": "Die maximale Mehrlänge muss ein Prozentsatz zwischen 1 und 1000 sein!",
+			"leg-too-far": "Der Abschnitt %s ist %s km Luftlinie lang: zwischen aufeinanderfolgenden Punkten sind höchstens %s km erlaubt!",
+			"no-route-leg": "Keine Route für den Abschnitt %s gefunden!",
+			"map-data-partial": "Kartendaten nur teilweise heruntergeladen (%s von %s Bereichen). Plane erneut, um den Download fortzusetzen!",
+			"map-data": "Kartendaten sind vorübergehend nicht verfügbar, versuche es später erneut!",
+			"geocoding": "Die Ortssuche ist vorübergehend nicht verfügbar, versuche es später erneut!",
+			"geocoding-disabled": "Die Ortssuche ist auf diesem Server nicht eingerichtet!",
+			"geocoding-limit": "Zu viele Suchen, warte eine Minute und versuche es erneut!",
+			"instructions": "Die Abbiegehinweise sind vorübergehend nicht verfügbar, versuche es später erneut!",
+			"instructions-timeout": "Die Abbiegehinweise haben zu lange gedauert, versuche es später erneut!",
+			"instructions-no-match": "Diese Strecke folgt bekannten Straßen nicht genau genug für Abbiegehinweise!",
+			"instructions-too-long": "Diese Strecke ist zu lang für Abbiegehinweise!",
+			"plan-running": "Es wird bereits eine Route geplant, warte bis sie fertig ist!",
+			"plan-busy": "Der Planer ist ausgelastet, versuche es in einer Minute erneut!",
+			"plan-limit": "Zu viele Routen geplant, warte ein paar Minuten und versuche es erneut!"
+		},
+		"points": {
+			"start": "Start",
+			"stop": "Zwischenstopp %s",
+			"end": "Ziel"
+		}
+	},
+	"id": "ID",
+	"bio": "Bio",
+	"text": "Text",
+	"Missing credentials": "Fehlende Anmeldedaten",
+	"start": "Start",
+	"end": "Ziel",
+	"vehicle": "Fahrzeug",
+	"policy": "Routenmodus",
+	"name": "Name",
+	"vehicles": "Fahrzeuge",
+	"type": "Typ",
+	"progress": "Fortschritt",
+	"oldPassword": "altes Passwort",
+	"newPassword": "neues Passwort",
+	"password": "Passwort",
+	"username": "Benutzername",
+	"confirmPassword": "Passwortbestätigung",
+	"title": "Titel",
+	"description": "Beschreibung",
+	"offset": "Offset",
+	"index": "Index",
+	"time": "Zeit",
+	"averageSpeed": "Durchschnittsgeschwindigkeit",
+	"maxSpeed": "Höchstgeschwindigkeit",
+	"distance": "Distanz",
+	"share": {
+		"not-found-title": "Beitrag nicht gefunden",
+		"not-found-body": "Dieser Beitrag wurde möglicherweise gelöscht.",
+		"shared-by": "Eine Strecke geteilt von %s",
+		"likes": {
+			"one": "%s Like",
+			"other": "%s Likes"
+		},
+		"open": "In TrackMate öffnen",
+		"hint": "Installiere die TrackMate-App, um diese Strecke zu fahren und den ganzen Beitrag zu sehen."
+	}
+}

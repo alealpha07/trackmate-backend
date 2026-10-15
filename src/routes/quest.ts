@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { User } from "../generated/prisma/client.js";
 import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId } from "../utils.js";
 import { parseVehicle, vehicleId } from "../vehicles.js";
+import { questText } from "../quests.js";
 
 const MAX_EXP_PER_LEVEL = 1000;
 // km or tracks in one go, far above any real travel
@@ -99,7 +100,11 @@ router.get("/", isAuthenticated, async (request: Request, response: Response): P
     try {
         const quests = await prisma.quest.findMany({ where: { userId: (request.user as User).id } });
 
-        response.send(quests.map((quest) => ({ ...quest, vehicle: vehicleId(quest.vehicle) })));
+        response.send(quests.map((quest) => ({
+            ...quest,
+            description: questText(quest, response),
+            vehicle: vehicleId(quest.vehicle),
+        })));
     } catch (error) {
         response.status(500).send(response.__("server.error"));
         console.error(error);
