@@ -259,6 +259,7 @@ async function main() {
                 username: seed.username,
                 password,
                 bio: seed.bio,
+                termsAcceptedAt: new Date(),
                 vehicles: { create: Object.values(Vehicle).map((vehicle) => ({ vehicle })) },
                 quests: { create: dailyQuests(Object.values(Vehicle)) },
             },

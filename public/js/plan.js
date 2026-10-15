@@ -1,6 +1,6 @@
 import * as maplibregl from "/vendor/maplibre-gl/maplibre-gl.mjs";
 import {
-    api, apiStream, applyTranslations, t, LANGUAGE, LANGUAGES, THEMES, savedLanguage, saveLanguage, savedTheme,
+    api, apiStream, applyTranslations, legalUrl, t, LANGUAGE, LANGUAGES, THEMES, savedLanguage, saveLanguage, savedTheme,
     saveTheme, isDarkTheme, onSystemThemeChange,
 } from "./common.js";
 
@@ -122,11 +122,12 @@ class ButtonControl {
 
 // a map button that opens a card of radio groups
 class MenuControl {
-    constructor(className, label, icon, groups) {
+    constructor(className, label, icon, groups, links = []) {
         this.className = className;
         this.label = label;
         this.icon = icon;
         this.groups = groups;
+        this.links = links;
     }
 
     onAdd() {
@@ -163,6 +164,18 @@ class MenuControl {
                 fieldset.append(label);
             }
             menu.append(fieldset);
+        }
+        if (this.links.length > 0) {
+            const nav = document.createElement("nav");
+            nav.className = "menu-links";
+            for (const link of this.links) {
+                const a = document.createElement("a");
+                a.href = link.href;
+                a.target = "_blank";
+                a.textContent = link.label;
+                nav.append(a);
+            }
+            menu.append(nav);
         }
 
         const toggle = (open) => {
@@ -206,6 +219,9 @@ map.addControl(new MenuControl("settings", t("plan.settings"), SETTINGS_ICON, [
             location.reload();
         },
     },
+], [
+    { href: legalUrl("privacy"), label: t("legal.privacy") },
+    { href: legalUrl("terms"), label: t("legal.terms") },
 ]), "top-right");
 
 // compass only shows when the map is rotated or tilted

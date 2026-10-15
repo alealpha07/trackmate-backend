@@ -70,8 +70,13 @@ export function t(key, ...args) {
     return text.replace(/\{(\d+)\}/g, (match, i) => (i < args.length ? String(args[i]) : match));
 }
 
+export function legalUrl(page) {
+    return `/${page}?lang=${LANGUAGE}`;
+}
+
 export function applyTranslations(root = document) {
     root.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
+    root.querySelectorAll("[data-legal]").forEach((el) => (el.href = legalUrl(el.dataset.legal)));
     root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder)));
     root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle)));
 }

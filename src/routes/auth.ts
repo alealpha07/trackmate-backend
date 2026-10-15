@@ -29,11 +29,15 @@ router.post("/register", registerLimit, async (request: Request, response: Respo
         if (sanitizedParams.password != sanitizedParams.confirmPassword) {
             return response.status(422).send(response.__("register.errors.passwords-not-match"));
         }
+        if (request.body.acceptTerms !== true) {
+            return response.status(422).send(response.__("register.errors.terms"));
+        }
 
         await prisma.user.create({
             data: {
                 username: sanitizedParams.username,
                 password: await hashPassword(sanitizedParams.password),
+                termsAcceptedAt: new Date(),
                 // all vehicles by default
                 vehicles: { create: Object.values(Vehicle).map((vehicle) => ({ vehicle })) }
             }

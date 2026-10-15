@@ -226,6 +226,7 @@ router.get("/export", isAuthenticated, fileLimit, async (request: Request, respo
             where: { id: userId },
             select: {
                 ...PUBLIC_USER,
+                termsAcceptedAt: true,
                 vehicles: { select: { vehicle: true } },
                 quests: true,
                 tracks: { include: { posts: true } },

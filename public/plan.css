@@ -55,6 +55,8 @@ html, body { height: 100%; overflow: hidden; }
 .my-location { width: 16px; height: 16px; border: 3px solid #fff; border-radius: 50%; background: var(--map-accent);
                box-shadow: 0 0 0 6px rgba(98, 0, 238, .18), 0 1px 4px rgba(0, 0, 0, .4); pointer-events: none; }
 .menu-control { position: relative; }
+/* open menus cover the credits below */
+.maplibregl-ctrl-top-right { z-index: 3; }
 .menu-control > button { display: grid; place-items: center; }
 .menu-control svg { width: 22px; height: 22px; fill: var(--control-icon); }
 .control-menu { position: absolute; top: 0; right: 52px; width: 180px; max-height: calc(100vh - 20px); overflow-y: auto;
@@ -68,6 +70,9 @@ html, body { height: 100%; overflow: hidden; }
                      font-size: .95rem; cursor: pointer; }
 .control-menu label:hover { background: var(--primary-tint); }
 .control-menu input { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--primary); }
+.control-menu .menu-links { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--divider); }
+.control-menu .menu-links a { display: block; padding: 10px 16px; color: var(--text); font-size: .95rem; text-decoration: none; }
+.control-menu .menu-links a:hover { background: var(--primary-tint); }
 
 .suggestions { position: absolute; z-index: 3; left: 0; right: 0; top: calc(100% + 2px); margin: 0; padding: 8px 0;
                list-style: none; max-height: 260px; overflow-y: auto; box-shadow: var(--shadow-raised); }
@@ -124,4 +129,5 @@ legend { margin: 0 0 6px; padding: 0; color: var(--muted); font-size: .8rem; }
              border-radius: var(--radius) var(--radius) 0 0; }
     .panel-body { gap: 14px; }
     .maplibregl-ctrl-bottom-right { bottom: var(--panel-height, 0px); }
+    .control-menu { max-height: calc(100vh - var(--panel-height, 0px) - 20px); }
 }

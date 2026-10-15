@@ -14,7 +14,8 @@
 			"passwords-not-match": "Passwords do not match!",
 			"username": "The username must be 3 to 30 letters, digits, dots, dashes or underscores!",
 			"password-short": "The password must be at least 8 characters long!",
-			"password-long": "The password is too long!"
+			"password-long": "The password is too long!",
+			"terms": "Accept the Terms and confirm you are at least 16 to register!"
 		}
 	},
 	"login": {
@@ -224,5 +225,10 @@
 		},
 		"open": "Open in TrackMate",
 		"hint": "Install the TrackMate app to ride this track and see the full post."
+	},
+	"legal": {
+		"privacy": "Privacy notice",
+		"terms": "Terms of use",
+		"updated": "Last updated: %s"
 	}
 }

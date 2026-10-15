@@ -14,7 +14,8 @@
 			"passwords-not-match": "Le password non coincidono!",
 			"username": "Il nome utente deve avere da 3 a 30 lettere, cifre, punti, trattini o trattini bassi!",
 			"password-short": "La password deve essere lunga almeno 8 caratteri!",
-			"password-long": "La password è troppo lunga!"
+			"password-long": "La password è troppo lunga!",
+			"terms": "Per registrarti accetta i Termini e conferma di avere almeno 16 anni!"
 		}
 	},
 	"login": {
@@ -224,5 +225,10 @@
 		},
 		"open": "Apri in TrackMate",
 		"hint": "Installa l'app TrackMate per percorrere questo percorso e vedere il post completo."
+	},
+	"legal": {
+		"privacy": "Informativa sulla privacy",
+		"terms": "Termini d'uso",
+		"updated": "Ultimo aggiornamento: %s"
 	}
 }

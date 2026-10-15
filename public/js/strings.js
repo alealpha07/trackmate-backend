@@ -100,6 +100,9 @@ export const STRINGS = {
         "credits.contact": "Contact",
         "credits.contactBody": "Questions or problems with TrackMate:",
         "credits.back": "Back to the planner",
+        "register.accept": "I am at least 16 years old and accept the {0}. See also the {1}.",
+        "legal.privacy": "Privacy notice",
+        "legal.terms": "Terms of use",
         "error.generic": "Something went wrong, try again.",
     },
     it: {
@@ -202,6 +205,9 @@ export const STRINGS = {
         "credits.contact": "Contatti",
         "credits.contactBody": "Domande o problemi con TrackMate:",
         "credits.back": "Torna al pianificatore",
+        "register.accept": "Ho almeno 16 anni e accetto i {0}. Vedi anche l'{1}.",
+        "legal.privacy": "Informativa sulla privacy",
+        "legal.terms": "Termini d'uso",
         "error.generic": "Qualcosa è andato storto, riprova.",
     },
     de: {
@@ -304,6 +310,9 @@ export const STRINGS = {
         "credits.contact": "Kontakt",
         "credits.contactBody": "Fragen oder Probleme mit TrackMate:",
         "credits.back": "Zurück zum Planer",
+        "register.accept": "Ich bin mindestens 16 Jahre alt und akzeptiere die {0}. Siehe auch die {1}.",
+        "legal.privacy": "Datenschutzerklärung",
+        "legal.terms": "Nutzungsbedingungen",
         "error.generic": "Etwas ist schiefgelaufen, versuche es erneut.",
     },
 };

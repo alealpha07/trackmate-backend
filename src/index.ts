@@ -26,6 +26,7 @@ import search from "./routes/search.js";
 import route from "./routes/route.js";
 import vehicle from "./routes/vehicle.js";
 import share from "./routes/share.js";
+import legal from "./routes/legal.js";
 // #endregion 
 
 // #region inizialization
@@ -107,7 +108,8 @@ app.use("/track", track);
 app.use("/search", search);
 app.use("/route", route);
 app.use("/vehicle", vehicle);
-// public: assetlinks.json and shared post pages
+// public: assetlinks.json, shared post pages, privacy notice and terms
+app.use("/", legal);
 app.use("/", share);
 
 app.use((error: any, request: Request, response: Response, next: NextFunction) => {

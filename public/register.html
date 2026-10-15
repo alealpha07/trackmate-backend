@@ -29,10 +29,12 @@
                 <label for="confirmPassword" data-i18n="auth.confirmPassword"></label>
                 <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required>
             </div>
+            <label class="terms"><input type="checkbox" name="acceptTerms" required><span id="acceptText"></span></label>
             <p id="error" class="error" role="alert" hidden></p>
             <button class="button" type="submit" data-i18n="register.submit"></button>
         </form>
         <p class="switch muted"><span data-i18n="register.switch"></span> <a href="/login" data-i18n="register.switchLink"></a></p>
+        <p class="legal-links"><a data-legal="privacy" data-i18n="legal.privacy"></a> · <a data-legal="terms" data-i18n="legal.terms"></a></p>
     </main>
     <script type="module" src="/js/auth.js"></script>
 </body>

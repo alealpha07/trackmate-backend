@@ -33,6 +33,10 @@ The server listens on the port set in `.env` (3000 in the example). The seed cre
 marco (Milano) and lena (Berlin), all with the password `trackmate`. Each has three tracks around their city, two
 of them posted, plus friends, likes and each other's travels. The web route planner is at http://localhost:3000/plan.
 
+The privacy notice and the terms of use are served at `/privacy` and `/terms`, in English, Italian and German
+(`?lang=` or the browser language); `?app=1` leaves out the header and footer for the app's WebView. Their texts are in `legal/`; change the date in `src/routes/legal.ts` when one
+changes.
+
 ## Docker
 
 ```bash

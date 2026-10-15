@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import fs from "fs";
 import { parseId, prisma } from "../utils.js";
 import { postImageFile } from "../files.js";
+import { escapeHtml, renderPage } from "../pages.js";
 
 const router = express.Router();
 
@@ -23,14 +24,6 @@ router.get("/.well-known/assetlinks.json", (req: Request, res: Response) => {
         },
     ]);
 });
-
-const escapeHtml = (text: string) =>
-    text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
 
 const publicOrigin = (req: Request) => process.env.PUBLIC_URL || `https://${req.get("host")}`;
 
@@ -71,9 +64,10 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
         const id = parseId(req.params.id);
         const post = id ? await findSharedPost(id) : null;
         if (!post) {
-            return res.status(404).type("html").send(renderPage({
-                lang: res.getLocale(),
+            return res.status(404).type("html").send(renderPage(res, {
                 title: `${res.__("share.not-found-title")} · TrackMate`,
+                meta: NO_INDEX,
+                style: SHARE_STYLE,
                 body: `<div class="card empty"><h2>${res.__("share.not-found-title")}</h2><p>${res.__("share.not-found-body")}</p></div>`,
             }));
         }
@@ -88,10 +82,10 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
         // in-app browsers don't always hand app links to the app
         const appUrl = `intent://${req.get("host")}/p/${post.id}#Intent;scheme=https;package=${ANDROID_PACKAGE_NAME};end`;
 
-        res.type("html").send(renderPage({
-            lang: res.getLocale(),
+        res.type("html").send(renderPage(res, {
             title: `${title} · TrackMate`,
-            meta: `
+            style: SHARE_STYLE,
+            meta: `${NO_INDEX}
     <meta name="description" content="${description}">
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="TrackMate">
@@ -119,24 +113,10 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
     }
 });
 
-// same icons as the app
-const PERSON_AVATAR = `<span class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>`;
-const NAVIGATION_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>`;
+const NO_INDEX = `
+    <meta name="robots" content="noindex">`;
 
-const renderPage = ({ lang, title, meta = "", body }: { lang: string; title: string; meta?: string; body: string }) => `<!DOCTYPE html>
-<html lang="${lang}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex">
-    <title>${title}</title>${meta}
-    <link rel="icon" href="/img/icon.webp">
-    <link rel="stylesheet" href="/vendor/roboto/400.css">
-    <link rel="stylesheet" href="/vendor/roboto/500.css">
-    <link rel="stylesheet" href="/vendor/roboto/700.css">
-    <link rel="stylesheet" href="/theme.css">
-    <script src="/js/theme-init.js"></script>
-    <style>
+const SHARE_STYLE = `
         main { display: flex; justify-content: center; padding: 24px 16px; }
         .card { width: 100%; max-width: 480px; }
         .author { display: flex; align-items: center; gap: 8px; padding: 16px 16px 0; }
@@ -152,14 +132,10 @@ const renderPage = ({ lang, title, meta = "", body }: { lang: string; title: str
         .open svg { width: 20px; height: 20px; fill: currentColor; }
         .hint { margin: 12px 0 0; text-align: center; color: var(--muted); font-size: .85rem; }
         .empty { padding: 32px 24px; text-align: center; }
-        .empty h2 { margin: 0 0 8px; color: var(--heading); font-weight: 500; }
-    </style>
-</head>
-<body>
-    <header class="app-bar"><img class="app-icon" src="/img/icon.webp" alt=""><h1>TrackMate</h1></header>
-    <main>${body}
-    </main>
-</body>
-</html>`;
+        .empty h2 { margin: 0 0 8px; color: var(--heading); font-weight: 500; }`;
+
+// same icons as the app
+const PERSON_AVATAR = `<span class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>`;
+const NAVIGATION_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>`;
 
 export default router;

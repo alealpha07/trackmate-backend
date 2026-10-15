@@ -1,6 +1,12 @@
-import { api, applyTranslations } from "./common.js";
+import { api, applyTranslations, legalUrl, t } from "./common.js";
 
 applyTranslations();
+
+const acceptText = document.getElementById("acceptText");
+if (acceptText) {
+    const link = (page, label) => `<a href="${legalUrl(page)}" target="_blank">${t(label)}</a>`;
+    acceptText.innerHTML = t("register.accept", link("terms", "legal.terms"), link("privacy", "legal.privacy"));
+}
 
 const form = document.querySelector("form");
 const error = document.getElementById("error");
@@ -15,7 +21,7 @@ form.addEventListener("submit", async (event) => {
     submit.disabled = true;
     const data = Object.fromEntries(new FormData(form));
     try {
-        if (form.dataset.mode === "register") await api("POST", "/auth/register", data);
+        if (form.dataset.mode === "register") await api("POST", "/auth/register", { ...data, acceptTerms: form.elements.acceptTerms.checked });
         await api("POST", "/auth/login", { username: data.username, password: data.password });
         location.replace("/plan");
     } catch (err) {
