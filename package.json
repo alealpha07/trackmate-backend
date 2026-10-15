@@ -10,7 +10,8 @@
     "db:seed": "prisma db seed",
     "test": "tsc -p test && vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.3.0",
@@ -37,6 +38,7 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/archiver": "^8.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
@@ -46,7 +48,9 @@
     "@types/node": "^24.19.2",
     "@types/passport": "^1.0.17",
     "@types/passport-local": "^1.0.38",
+    "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^5.0.4",
+    "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.4"

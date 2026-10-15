@@ -104,7 +104,8 @@
 		"errors": {
 			"missing": "Missione mancante!",
 			"uncompleted": "Missione non completata!",
-			"progress": "Avanzamento della missione non valido!"
+			"progress": "Avanzamento della missione non valido!",
+			"type": "Tipo di missione non valido!"
 		},
 		"text": {
 			"distance": {

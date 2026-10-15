@@ -104,7 +104,8 @@
 		"errors": {
 			"missing": "Quest missing!",
 			"uncompleted": "Quest not completed!",
-			"progress": "Invalid quest progress!"
+			"progress": "Invalid quest progress!",
+			"type": "Invalid quest type!"
 		},
 		"text": {
 			"distance": {

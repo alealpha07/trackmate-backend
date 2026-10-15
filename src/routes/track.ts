@@ -15,6 +15,9 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 // a day of recording at one point a second
 const MAX_TRACK_POINTS = 100_000;
+const TRAVEL_VALUES = ["time", "averageSpeed", "maxSpeed", "distance"];
+
+const isAmount = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value >= 0;
 
 function vehicleFilter(query: any): Vehicle | undefined | null {
     if (query.vehicle === undefined || query.vehicle === "") return undefined;
@@ -197,6 +200,9 @@ router.post("/", isAuthenticated, async (request: Request, response: Response): 
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
+        if (typeof sanitizedParams.name !== "string") {
+            return response.status(422).send(response.__("server.bad-request"));
+        }
         const vehicle = parseVehicle(sanitizedParams.vehicle);
         if (!vehicle) {
             return response.status(422).send(response.__("track.errors.vehicle"));
@@ -225,6 +231,9 @@ router.post("/travel", isAuthenticated, async (request: Request, response: Respo
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        if (!TRAVEL_VALUES.every((name) => isAmount(sanitizedParams[name]))) {
+            return response.status(422).send(response.__("server.bad-request"));
+        }
         const track = await findVisibleTrack(response, sanitizedParams.id, (request.user as User).id);
         if (!track) return;
         let vehicle = track.vehicle;
@@ -524,6 +533,9 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
         const trackId = parseId(sanitizedParams.id);
         if (!trackId) {
             return sendInvalidId(response);
+        }
+        if (typeof sanitizedParams.name !== "string") {
+            return response.status(422).send(response.__("server.bad-request"));
         }
         const userId = (request.user as User).id;
         const vehicle = request.body.vehicle == null ? undefined : parseVehicle(request.body.vehicle);

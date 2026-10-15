@@ -132,6 +132,9 @@ router.get("/request", isAuthenticated, async (request: Request, response: Respo
             where: {
                 receiverId: (request.user as User).id,
                 status: false
+            },
+            include: {
+                sender: { select: PUBLIC_USER }
             }
         });
         response.send(friendRequests);
@@ -141,7 +144,7 @@ router.get("/request", isAuthenticated, async (request: Request, response: Respo
     }
 })
 
-// List Friend Reqeusts
+// List Sent Friend Requests
 router.get("/request/sent", isAuthenticated, async (request: Request, response: Response): Promise<any> => {
     try {
         const friendRequests = await prisma.friendRequest.findMany({
@@ -150,7 +153,7 @@ router.get("/request/sent", isAuthenticated, async (request: Request, response: 
                 status: false
             },
             include: {
-                sender: { select: PUBLIC_USER }
+                receiver: { select: PUBLIC_USER }
             }
         });
         response.send(friendRequests);

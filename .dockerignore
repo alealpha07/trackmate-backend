@@ -12,3 +12,5 @@ cache
 src/generated
 test
 coverage
+vitest.config.ts
+playwright.config.ts

@@ -30,8 +30,11 @@ export function passwordProblem(password: unknown): string | null {
 }
 
 function initialize(passport: PassportStatic) {
-    const authenticateUser = async (username:string, password:string, done: Function) => {
+    const authenticateUser = async (username: unknown, password: unknown, done: Function) => {
         try {
+            if (typeof username !== "string" || typeof password !== "string") {
+                return done(null, false, { message: "auth.errors.wrong-credentials" });
+            }
             const user = await prisma.user.findUnique({ where: { username: username } });
             const passwordsAreMatching = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
             if (user && passwordsAreMatching) {

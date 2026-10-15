@@ -11,6 +11,8 @@ import sharp from "sharp";
 const router = express.Router();
 const POST_WITH_AUTHOR = { Track: { include: { user: { select: PUBLIC_USER } } } } as const;
 
+const hasTexts = (params: any) => typeof params.title === "string" && typeof params.description === "string";
+
 const storage = multer.memoryStorage();
 const upload = multer({
     storage,
@@ -146,6 +148,9 @@ router.post("/", isAuthenticated, async (request: Request, response: Response): 
         if (!trackId) {
             return sendInvalidId(response);
         }
+        if (!hasTexts(sanitizedParams)) {
+            return response.status(422).send(response.__("server.bad-request"));
+        }
         const track = await prisma.track.findUnique({ where: { id: trackId }, select: { userId: true } });
         if (!track) {
             return response.status(404).send(response.__("track.errors.missing"));
@@ -186,6 +191,9 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
         }
 
+        if (!hasTexts(sanitizedParams)) {
+            return response.status(422).send(response.__("server.bad-request"));
+        }
         const post = await findOwnPost(response, sanitizedParams.id, (request.user as User).id);
         if (!post) return;
 

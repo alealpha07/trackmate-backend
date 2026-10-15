@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { User } from "../generated/prisma/client.js";
+import { QuestType, User } from "../generated/prisma/client.js";
 import { sanitizeParams, prisma, isAuthenticated, parseId, sendInvalidId } from "../utils.js";
 import { parseVehicle, vehicleId } from "../vehicles.js";
 import { questText } from "../quests.js";
@@ -16,6 +16,9 @@ router.post("/", isAuthenticated, async (request: Request, response: Response): 
         const { sanitizedParams, missingParams } = sanitizeParams(requiredParams, request.body);
         if (missingParams.length > 0) {
             return response.status(422).send(response.__("server.missing-params") + missingParams.map((p => response.__(p))).join(", "));
+        }
+        if (!Object.values(QuestType).includes(sanitizedParams.type)) {
+            return response.status(422).send(response.__("quest.errors.type"));
         }
         const vehicle = parseVehicle(sanitizedParams.vehicle);
         if (vehicle === null) {

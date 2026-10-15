@@ -16,7 +16,10 @@ router.get("/", isAuthenticated, searchLimit, async (req: Request, res: Response
             );
         }
 
-        const searchText = (sanitizedParams.text as string).toLowerCase();
+        if (typeof sanitizedParams.text !== "string") {
+            return res.status(422).send(res.__("server.bad-request"));
+        }
+        const searchText = sanitizedParams.text.toLowerCase();
         const sortBy = (req.query.sortBy as string) || "score"; 
 
         const users = await prisma.user.findMany({

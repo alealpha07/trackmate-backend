@@ -43,11 +43,21 @@ changes.
 npm test               # type-checks the tests, then runs them with Vitest
 npm run test:watch
 npm run test:coverage  # report in coverage/
+npm run test:e2e       # the web pages in headless Chromium, with Playwright
 ```
 
 The tests run offline and never read `.env`: each test file gets its own migrated SQLite database, upload folder and
 caches in a temporary directory. Outside services point at a closed local port, and any request to a public host
 fails. Route planning runs on two OpenStreetMap tiles in `test/fixtures/osm/`.
+
+`test/unit/` tests the routing and helpers directly, `test/http/` calls the API with supertest: authorization on every
+route, owner checks, the data export and account deletion, and each feature. Valhalla, Photon and Overpass are
+replaced by small local fakes.
+
+`test/e2e/` drives the login, register, legal and planner pages in Chromium, on desktop and phone sizes. Playwright
+starts its own server on port 3917 with a temporary database. Map tiles are replaced by a blank image, and a test
+fails on any request to another host or any console error. The first time, install the browser with
+`npx playwright install chromium`.
 
 ## Docker
 
