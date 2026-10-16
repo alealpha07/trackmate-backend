@@ -33,10 +33,6 @@ The server listens on the port set in `.env` (3000 in the example). The seed cre
 marco (Milano) and lena (Berlin), all with the password `trackmate`. Each has three tracks around their city, two
 of them posted, plus friends, likes and each other's travels. The web route planner is at http://localhost:3000/plan.
 
-The privacy notice and the terms of use are served at `/privacy` and `/terms`, in English, Italian and German
-(`?lang=` or the browser language); `?app=1` leaves out the header and footer for the app's WebView. Their texts are in `legal/`; change the date in `src/routes/legal.ts` when one
-changes.
-
 ## Tests
 
 ```bash
@@ -46,7 +42,7 @@ npm run test:coverage  # report in coverage/
 npm run test:e2e       # the web pages in headless Chromium, with Playwright
 ```
 
-The tests run offline and never read `.env`: each test file gets its own migrated SQLite database, upload folder and
+The tests run offline: each test file gets its own migrated SQLite database, upload folder and
 caches in a temporary directory. Outside services point at a closed local port, and any request to a public host
 fails. Route planning runs on two OpenStreetMap tiles in `test/fixtures/osm/`.
 
