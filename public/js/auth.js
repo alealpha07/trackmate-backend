@@ -12,8 +12,9 @@ const form = document.querySelector("form");
 const error = document.getElementById("error");
 const submit = form.querySelector("button[type=submit]");
 
-// already logged in
-api("GET", "/auth/user").then(() => location.replace("/plan"), () => {});
+// an old error would sit next to the browser's own hint
+form.addEventListener("invalid", () => (error.hidden = true), true);
+form.addEventListener("input", () => (error.hidden = true));
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();

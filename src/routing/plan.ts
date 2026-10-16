@@ -1,4 +1,4 @@
-import { nodeExtent, planningBBox } from "./data/bbox.js";
+import { elevationExtent, planningBBox } from "./data/bbox.js";
 import { buildGraph } from "./graph/buildGraph.js";
 import { capDetour } from "./search/cappedRoute.js";
 import { DISPLAY_CYCLING_SPEED_KMH, GRAPH_CACHE_MAX_EDGES } from "./config.js";
@@ -89,7 +89,7 @@ export async function planRoute(
         const { key, elements } = legTiles[i];
         const { graph, adjacency } = await cachedGraph(key, async () => {
             const data = elements();
-            const elevation = await loadElevation(nodeExtent(data, boxes[i]), signal);
+            const elevation = await loadElevation(elevationExtent(data, boxes[i]), signal);
             const graph = buildGraph(data, boxes[i], elevation);
             const adjacency = buildAdjacency(graph);
             markSnappable(graph, adjacency);

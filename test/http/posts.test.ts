@@ -123,6 +123,10 @@ describe("feeds", () => {
 describe("editing and deleting", () => {
     test("the author can edit, with texts only", async () => {
         await author.put("/post").send({ id: postId, title: ["Spam"], description: "d" }).expect(422, text("en", "server.bad-request"));
+        const tooLong = text("en", "post.errors.length", "100", "2000");
+        await author.put("/post").send({ id: postId, title: "t".repeat(101), description: "d" }).expect(422, tooLong);
+        await author.put("/post").send({ id: postId, title: "t", description: "d".repeat(2001) }).expect(422, tooLong);
+        await author.post("/post").send({ id: trackId, title: "t".repeat(101), description: "d" }).expect(422, tooLong);
         await author.put("/post").send({ id: postId, title: "Steep hills", description: "Bring water" })
             .expect(200, text("en", "post.success.update"));
         expect(await prisma.post.findUniqueOrThrow({ where: { id: postId } })).toMatchObject({ title: "Steep hills", description: "Bring water" });

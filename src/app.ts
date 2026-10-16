@@ -84,10 +84,17 @@ app.use(session({
 app.use(cookieParser(COOKIE_SECRET));
 app.use(passport.initialize());
 app.use(passport.session());
+// decided here, so the pages never ask /auth/user and log a 401
+app.get("/login", (request, response, next) => (request.isAuthenticated() ? response.redirect("/plan") : next()));
+app.get("/register", (request, response, next) => (request.isAuthenticated() ? response.redirect("/plan") : next()));
+app.get("/plan", (request, response, next) => (request.isAuthenticated() ? next() : response.redirect("/login")));
 app.use(express.static(path.join(import.meta.dirname, "..", "public"), { extensions: ["html"] }));
 // served from here so browsers never contact Google Fonts or a CDN (GDPR)
 const vendor = (pkg: string) => express.static(path.join(import.meta.dirname, "..", "node_modules", pkg));
 app.use("/vendor/maplibre-gl", vendor("maplibre-gl/dist"));
+// the licence is at the package root, outside dist
+app.use("/vendor/maplibre-gl/LICENSE.txt", (request, response) =>
+    response.type("text/plain").sendFile(path.join(import.meta.dirname, "..", "node_modules", "maplibre-gl", "LICENSE.txt")));
 app.use("/vendor/roboto", vendor("@fontsource/roboto"));
 // the planner is the only web page for now
 app.get("/", (request, response) => response.redirect(request.isAuthenticated() ? "/plan" : "/login"));

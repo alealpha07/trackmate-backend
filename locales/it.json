@@ -65,7 +65,8 @@
 			"hidden": "Questo percorso non è disponibile: è privato!",
 			"file": "File del percorso non valido!",
 			"travel-missing": "Viaggio non trovato!",
-			"travel-not-owner": "Solo il proprietario può modificare questo viaggio!"
+			"travel-not-owner": "Solo il proprietario può modificare questo viaggio!",
+			"name": "Il nome deve essere lungo da 1 a %s caratteri!"
 		}
 	},
 	"friend": {
@@ -93,7 +94,8 @@
 		},
 		"errors": {
 			"missing": "Post mancante!",
-			"not-owner": "Solo l'autore può modificare questo post!"
+			"not-owner": "Solo l'autore può modificare questo post!",
+			"length": "Il titolo può avere al massimo %s caratteri e la descrizione %s!"
 		}
 	},
 	"quest": {
@@ -183,7 +185,8 @@
 			"instructions-too-long": "Questo percorso è troppo lungo per le indicazioni passo passo!",
 			"plan-running": "Stai già pianificando un percorso, aspetta che finisca!",
 			"plan-busy": "Il pianificatore è occupato, riprova tra un minuto!",
-			"plan-limit": "Troppi percorsi pianificati, aspetta qualche minuto e riprova!"
+			"plan-limit": "Troppi percorsi pianificati, aspetta qualche minuto e riprova!",
+			"too-many-stops": "Al massimo %s tappe per percorso!"
 		},
 		"points": {
 			"start": "partenza",

@@ -151,7 +151,11 @@ function parseSpeed(value: string | undefined): number | null {
     const implicit: Record<string, number> = {
         urban: 50, rural: 90, motorway: 130, trunk: 110, living_street: 20, bicycle_road: 30,
     };
-    return implicit[text.split(":").pop()!] ?? null;
+    // StVO 3(3): 100 outside built-up areas
+    const byCountry: Record<string, Record<string, number>> = { de: { rural: 100 } };
+    const parts = text.split(":");
+    const kind = parts.pop()!;
+    return byCountry[parts[0] ?? ""]?.[kind] ?? implicit[kind] ?? null;
 }
 
 export function maxspeedKmh(tags: Tags, direction: Direction): number {

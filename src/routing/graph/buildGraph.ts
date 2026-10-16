@@ -1,12 +1,13 @@
 import { nodeExtent } from "../data/bbox.js";
-import { DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "../config.js";
+import { CROSSING_SITE_METERS, DOWNHILL_GRADE, GRADE_WINDOW_METERS, RAILWAYS } from "../config.js";
 import { haversineMeters } from "../haversine.js";
 import { levelOfTrafficStress } from "./lts.js";
 import {
     bicycleAllowed, bicycleDirection, bikeInfra, drivingSide, drivingSideIn, hasConstruction,
-    hasEmbeddedRails, hasParkedCars, isPaved,
+    hasEmbeddedRails, hasParkedCars, isPaved, PATH_HIGHWAYS,
 } from "./osmTags.js";
 import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable.js";
+import { besideMajorRoad } from "./sidepath.js";
 import {
     BBox, Direction, DrivingSide, Elevation, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph, Tags,
 } from "../types.js";
@@ -15,7 +16,8 @@ import {
 function isRoutable(tags: Tags): boolean {
     const highway = tags.highway;
     if (!highway || highway === "steps") return false;
-    if (tags.bicycle === "no" || tags.bicycle === "private") return false;
+    // use_sidepath: German roads with a compulsory cycle path next to them (StVO 2(4))
+    if (["no", "private", "use_sidepath"].includes(tags.bicycle ?? "")) return false;
     if ((highway === "footway" || highway === "pedestrian") && !bicycleAllowed(tags)) return false;
     const motorOnly = /^(motorway|trunk)(_link)?$/.test(highway) || tags.motorroad === "yes";
     if (motorOnly && !bicycleAllowed(tags)) return false;
@@ -23,11 +25,11 @@ function isRoutable(tags: Tags): boolean {
     return true;
 }
 
-function edgeProfile(tags: Tags, direction: Direction, driving: DrivingSide) {
+function edgeProfile(tags: Tags, direction: Direction, driving: DrivingSide, besideMajor = false) {
     const infra = bikeInfra(tags, direction, driving);
     const parked = hasParkedCars(tags, direction, driving);
     const paved = isPaved(tags);
-    const type = routeType(tags, infra, parked, paved);
+    const type = routeType(tags, infra, parked, paved, besideMajor);
     return {
         routeType: type,
         risk: ROUTE_TYPE_OR[type]
@@ -68,7 +70,9 @@ function wayGrades(points: OverpassNode[], tags: Tags, elevation: Elevation): nu
     return along.slice(1).map((end, i) => {
         const middle = (along[i] + end) / 2;
         const start = Math.min(Math.max(0, middle - window / 2), length - window);
-        return (heightAt(start + window) - heightAt(start)) / window;
+        const grade = (heightAt(start + window) - heightAt(start)) / window;
+        // unknown height beyond the loaded area counts as flat
+        return Number.isFinite(grade) ? grade : 0;
     });
 }
 
@@ -77,12 +81,19 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
     const ways: OverpassWay[] = [];
     const railNodes = new Set<number>();
     for (const el of elements) {
-        if (el.type === "node") nodeById.set(el.id, el);
-        else if (el.tags?.highway) ways.push(el);
-        else if (RAILWAYS.includes(el.tags?.railway ?? "")) el.nodes.forEach((id) => railNodes.add(id));
+        if (el.type === "node") {
+            nodeById.set(el.id, el);
+            continue;
+        }
+        if (el.tags?.highway) ways.push(el);
+        // a street can be a tram line too
+        if (RAILWAYS.includes(el.tags?.railway ?? "")) el.nodes.forEach((id) => railNodes.add(id));
     }
-    // railway crossing hazard goes on the edge arriving at the node
-    const crossing = (to: number) => (railNodes.has(to) ? HAZARD_OR.tracks : 1);
+    // railway crossing hazard goes on the edge arriving at the node, over the crossing site only
+    const crossing = (to: number, distance: number) => (railNodes.has(to)
+        ? 1 + ((HAZARD_OR.tracks - 1) * Math.min(CROSSING_SITE_METERS, distance)) / distance
+        : 1);
+    const besideMajor = besideMajorRoad(ways, nodeById);
     const graphSide = drivingSideIn(nodeExtent(elements, bbox));
 
     const usedNodeIds = new Set<number>();
@@ -100,6 +111,18 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
         const only = bicycleDirection(tags);
         const forward = only === "backward" ? null : edgeProfile(tags, "forward", driving);
         const backward = only === "forward" ? null : edgeProfile(tags, "backward", driving);
+        // the same path as a cycle track, used where it runs next to a major road
+        const asSidepath = PATH_HIGHWAYS.includes(tags.highway)
+            ? {
+                forward: forward && edgeProfile(tags, "forward", driving, true),
+                backward: backward && edgeProfile(tags, "backward", driving, true),
+            }
+            : null;
+        const mayBeSidepath = asSidepath !== null
+            && (asSidepath.forward ?? asSidepath.backward)!.routeType !== (forward ?? backward)!.routeType;
+        // the street is the rail line itself, its own nodes aren't crossings
+        const onRails = RAILWAYS.includes(tags.railway ?? "");
+        const crossingOf = (to: number, distance: number) => (onRails ? 1 : crossing(to, distance));
 
         const grades = elevation && points.every(Boolean)
             ? wayGrades(points as OverpassNode[], tags, elevation)
@@ -118,16 +141,19 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
             usedNodeIds.add(b.id);
 
             const grade = grades[i];
-            if (forward) {
+            const sidepath = mayBeSidepath && besideMajor(a, b);
+            const there = sidepath ? asSidepath!.forward : forward;
+            const back = sidepath ? asSidepath!.backward : backward;
+            if (there) {
                 edges.push({
-                    id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, grade,
-                    risk: forward.risk * crossing(b.id) * downhill(grade),
+                    id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...there, grade,
+                    risk: there.risk * crossingOf(b.id, distance) * downhill(grade),
                 });
             }
-            if (backward) {
+            if (back) {
                 edges.push({
-                    id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, grade: -grade,
-                    risk: backward.risk * crossing(a.id) * downhill(-grade),
+                    id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...back, grade: -grade,
+                    risk: back.risk * crossingOf(a.id, distance) * downhill(-grade),
                 });
             }
         }

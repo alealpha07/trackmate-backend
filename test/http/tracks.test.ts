@@ -30,6 +30,12 @@ describe("creating a track", () => {
         for (const name of [42, ["Loop"], { name: "Loop" }, true]) {
             await owner.post("/track").send({ name, vehicle: "bicycle" }).expect(422, text("en", "server.bad-request"));
         }
+        const badName = text("en", "track.errors.name", "100");
+        for (const name of ["   ", "x".repeat(101)]) {
+            await owner.post("/track").send({ name, vehicle: "bicycle" }).expect(422, badName);
+        }
+        const longest = (await owner.post("/track").send({ name: "x".repeat(100), vehicle: "bicycle" }).expect(200)).body.id;
+        await owner.delete("/track").query({ id: longest }).expect(200);
         trackId = (await owner.post("/track").send({ name: "Loop", vehicle: "bicycle" }).expect(200)).body.id;
         expect(await prisma.track.findUniqueOrThrow({ where: { id: trackId } })).toMatchObject({ userId: ownerId, name: "Loop", vehicle: "BICYCLE" });
     });
@@ -43,6 +49,9 @@ describe("creating a track", () => {
         await upload(trackJson([{ lat: 91, lng: 9 }])).expect(422, invalid);
         await upload(trackJson([{ lat: 44, lng: 181 }])).expect(422, invalid);
         await upload(Buffer.from(JSON.stringify({ track: [{ lat: "44", lng: "9" }] }))).expect(422, invalid);
+        // the app can't read points without a timestamp
+        await upload(Buffer.from(JSON.stringify({ track: [{ lat: 44, lng: 9 }] }))).expect(422, invalid);
+        await upload(Buffer.from(JSON.stringify({ track: [{ lat: 44, lng: 9, timestamp: 0, speed: "fast" }] }))).expect(422, invalid);
         expect(fs.existsSync(trackFile(trackId))).toBe(false);
 
         await upload(trackJson()).expect(200, text("en", "file.success.upload"));
@@ -123,6 +132,7 @@ describe("editing a track", () => {
         expect((await prisma.travel.findMany({ where: { trackId: id } })).map((t) => t.vehicle)).toEqual(["CAR"]);
         await owner.put("/track").send({ id, name: "Drive", vehicle: "plane" }).expect(422);
         await owner.put("/track").send({ id, name: ["Drive"] }).expect(422, text("en", "server.bad-request"));
+        await owner.put("/track").send({ id, name: "x".repeat(101) }).expect(422, text("en", "track.errors.name", "100"));
     });
 
     test("not to another kind once others travelled it", async () => {

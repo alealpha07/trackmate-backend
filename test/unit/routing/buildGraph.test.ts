@@ -48,6 +48,7 @@ describe("buildGraph", () => {
             way(14, [1, 9], { highway: "steps" }),
             way(15, [2, 9], { highway: "motorway" }),
             way(16, [3, 9], { highway: "residential", bicycle: "no" }),
+            way(67, [4, 9], { highway: "primary", bicycle: "use_sidepath" }),
         ])).toHaveLength(0);
         expect(edgesOf([way(12, [4, 5], { highway: "footway", bicycle: "yes" })])).toHaveLength(2);
         expect(edgesOf([way(13, [5, 6], { highway: "residential", access: "no", bicycle: "yes" })])).toHaveLength(2);
@@ -61,8 +62,32 @@ describe("buildGraph", () => {
             way(18, [1, 2, 3], { highway: "residential" }),
             way(19, [9, 2], { railway: "tram" }),
         ]);
-        expect(crossing.find((e) => e.id === "18:0:f")!.risk).toBeCloseTo(ROUTE_TYPE_OR.local * HAZARD_OR.tracks);
+        const arriving = crossing.find((e) => e.id === "18:0:f")!;
         expect(crossing.find((e) => e.id === "18:1:f")!.risk).toBe(ROUTE_TYPE_OR.local);
+        // the tracks weigh over the 5 m crossing site, not the whole 100 m edge
+        const extra = arriving.distance * (arriving.risk - ROUTE_TYPE_OR.local);
+        expect(extra).toBeCloseTo(5 * ROUTE_TYPE_OR.local * (HAZARD_OR.tracks - 1));
+    });
+
+    test("a crossing costs the same on short and long edges", () => {
+        const extraCost = (stepMeters: number) => {
+            const nodes = [node(60, 0, 0), node(61, stepMeters, 0), node(62, stepMeters, 100)];
+            const [edge] = buildGraph([...nodes, way(63, [60, 61], { highway: "residential", oneway: "yes" }),
+                way(64, [62, 61], { railway: "rail" })], BBOX).edges;
+            return edge.distance * edge.risk - edge.distance * ROUTE_TYPE_OR.local;
+        };
+        expect(extraCost(3)).toBeCloseTo(3 * ROUTE_TYPE_OR.local * (HAZARD_OR.tracks - 1));
+        expect(extraCost(40)).toBeCloseTo(extraCost(400));
+    });
+
+    test("a street that is a tram line too: crossing it counts, riding it counts once", () => {
+        const edges = edgesOf([
+            way(65, [9, 2], { highway: "residential" }),
+            way(66, [1, 2, 3], { highway: "tertiary", railway: "tram" }),
+        ]);
+        expect(edges.find((e) => e.id === "65:0:f")!.risk).toBeGreaterThan(ROUTE_TYPE_OR.local);
+        const along = edges.find((e) => e.id === "66:0:f")!;
+        expect(along.risk).toBeCloseTo(ROUTE_TYPE_OR.major_parked * HAZARD_OR.tracks);
     });
 
     test("downhill only in the direction going down", () => {
@@ -84,6 +109,35 @@ describe("buildGraph", () => {
         expect(track).toMatchObject({ bikeway: false, unpaved: true });
         const [primary] = edgesOf([way(23, [1, 2], { highway: "primary", maxspeed: "70" })]);
         expect(primary.lts).toBe(4);
+    });
+
+    test("bike-only paths next to a major road are cycle tracks", () => {
+        // the primary runs east along y = 0
+        const nodes = [
+            node(70, 0, 12), node(71, 100, 12), node(72, 0, 80), node(73, 100, 80),
+            node(74, 250, -60), node(75, 250, 60),
+        ];
+        const typeOf = (wayId: number, tags: Tags, ids: number[]) => buildGraph([
+            ...NODES, ...nodes, way(76, [1, 2, 3, 4], { highway: "primary" }), way(wayId, ids, tags),
+        ], BBOX).edges.find((e) => e.id === `${wayId}:0:f`)!.routeType;
+        expect(typeOf(77, { highway: "cycleway" }, [70, 71])).toBe("cycle_track");
+        expect(typeOf(77, { highway: "cycleway", is_sidepath: "no" }, [70, 71])).toBe("bike_path");
+        expect(typeOf(77, { highway: "cycleway", surface: "gravel" }, [70, 71])).toBe("bike_path");
+        expect(typeOf(77, { highway: "footway", bicycle: "designated", segregated: "yes" }, [70, 71])).toBe("cycle_track");
+        expect(typeOf(77, { highway: "footway", bicycle: "designated" }, [70, 71])).toBe("multiuse_paved");
+        // too far, or crossing the road
+        expect(typeOf(77, { highway: "cycleway" }, [72, 73])).toBe("bike_path");
+        expect(typeOf(77, { highway: "cycleway" }, [74, 75])).toBe("bike_path");
+        // next to a residential street it stays a bike path
+        expect(buildGraph([...NODES, ...nodes, way(78, [1, 2], { highway: "residential" }),
+            way(79, [70, 71], { highway: "cycleway" })], BBOX).edges.find((e) => e.id === "79:0:f")!.routeType)
+            .toBe("bike_path");
+    });
+
+    test("heights beyond the loaded area count as flat", () => {
+        const elevation = (_lat: number, lon: number) => (lon < 10.331 ? 100 : NaN);
+        const edges = buildGraph([...NODES, way(80, [1, 2, 3], { highway: "residential" })], BBOX, elevation).edges;
+        expect(edges.every((e) => Number.isFinite(e.grade))).toBe(true);
     });
 
     test("only nodes on routable ways are kept", () => {

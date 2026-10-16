@@ -76,3 +76,17 @@ test.describe("register", () => {
         await expect(page).toHaveURL(/\/register$/);
     });
 });
+
+test("the login pages don't ask the server who is logged in", async ({ page }) => {
+    const asked: string[] = [];
+    page.on("request", (request) => {
+        if (request.url().includes("/auth/user")) asked.push(request.url());
+    });
+    for (const path of ["/login", "/register"]) {
+        await page.goto(path);
+        await expect(page.locator("h1")).not.toBeEmpty();
+    }
+    await page.goto("/plan");
+    await expect(page).toHaveURL(/\/login$/);
+    expect(asked).toEqual([]);
+});

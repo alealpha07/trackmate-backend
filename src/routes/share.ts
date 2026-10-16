@@ -98,7 +98,7 @@ router.get("/p/:id", async (req: Request, res: Response): Promise<any> => {
     <article class="card post">
         <header class="author">${PERSON_AVATAR}<span class="user">${username}</span></header>
         <h2>${title}</h2>
-        ${imageUrl ? `<img class="cover" src="${imageUrl}" alt="${title}">` : ""}
+        ${imageUrl ? `<img class="cover" src="/p/${post.id}/image" alt="${title}">` : ""}
         <div class="content">
             <p class="likes">${res.__n("share.likes", likes)}</p>
             ${description ? `<p class="description">${description}</p>` : ""}

@@ -65,7 +65,8 @@
 			"hidden": "This track isn't available: it's private!",
 			"file": "Invalid track file!",
 			"travel-missing": "Travel not found!",
-			"travel-not-owner": "Only the owner can change this travel!"
+			"travel-not-owner": "Only the owner can change this travel!",
+			"name": "The name must be 1 to %s characters long!"
 		}
 	},
 	"friend": {
@@ -93,7 +94,8 @@
 		},
 		"errors": {
 			"missing": "Post missing!",
-			"not-owner": "Only the author can change this post!"
+			"not-owner": "Only the author can change this post!",
+			"length": "The title can be at most %s characters and the description %s!"
 		}
 	},
 	"quest": {
@@ -183,7 +185,8 @@
 			"instructions-too-long": "This track is too long for turn-by-turn instructions!",
 			"plan-running": "A route is already being planned, wait for it to finish!",
 			"plan-busy": "The planner is busy, try again in a minute!",
-			"plan-limit": "Too many routes planned, wait a few minutes and try again!"
+			"plan-limit": "Too many routes planned, wait a few minutes and try again!",
+			"too-many-stops": "At most %s stops per route!"
 		},
 		"points": {
 			"start": "start",

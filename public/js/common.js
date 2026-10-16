@@ -79,9 +79,23 @@ export function applyTranslations(root = document) {
     root.querySelectorAll("[data-legal]").forEach((el) => (el.href = legalUrl(el.dataset.legal)));
     root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder)));
     root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle)));
+    root.querySelectorAll("[data-i18n-label]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nLabel)));
 }
 
-export async function api(method, url, body, { signal } = {}) {
+// fetch fails with a TypeError in the browser's language and wording
+function offline(error) {
+    return error instanceof TypeError ? apiError(t("error.offline")) : error;
+}
+
+export async function api(method, url, body, options) {
+    try {
+        return await request(method, url, body, options);
+    } catch (error) {
+        throw offline(error);
+    }
+}
+
+async function request(method, url, body, { signal } = {}) {
     const isForm = body instanceof FormData;
     const res = await fetch(url, {
         method,
@@ -102,7 +116,15 @@ function apiError(message, status) {
     return error;
 }
 
-export async function apiStream(method, url, body, { signal, onMessage }) {
+export async function apiStream(method, url, body, options) {
+    try {
+        return await stream(method, url, body, options);
+    } catch (error) {
+        throw offline(error);
+    }
+}
+
+async function stream(method, url, body, { signal, onMessage }) {
     const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}stream=1`, {
         method,
         credentials: "same-origin",

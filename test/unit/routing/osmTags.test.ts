@@ -97,6 +97,8 @@ describe("speed and lanes", () => {
         expect(maxspeedKmh({ "maxspeed:type": "DE:zone30" }, "forward")).toBe(30);
         expect(maxspeedKmh({ "zone:maxspeed": "DE:30" }, "forward")).toBe(30);
         expect(maxspeedKmh({ "zone:maxspeed": "DE:urban" }, "forward")).toBe(50);
+        expect(maxspeedKmh({ maxspeed: "IT:rural" }, "forward")).toBe(90);
+        expect(maxspeedKmh({ "maxspeed:type": "DE:rural" }, "forward")).toBe(100);
         expect(maxspeedKmh({ maxspeed: "walk" }, "forward")).toBe(7);
         expect(maxspeedKmh({ maxspeed: "50", "maxspeed:backward": "30" }, "backward")).toBe(30);
         expect(maxspeedKmh({}, "forward")).toBe(50);

@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { User } from "../generated/prisma/client.js";
 import { sanitizeParams, isAuthenticated } from "../utils.js";
 import { haversineMeters } from "../routing/haversine.js";
-import { FILTERS, MAX_PLAN_DISTANCE_METERS, POLICIES } from "../routing/config.js";
+import { FILTERS, MAX_PLAN_DISTANCE_METERS, MAX_PLAN_STOPS, POLICIES } from "../routing/config.js";
 import { planRoute } from "../routing/plan.js";
 import { PartialDownloadError } from "../routing/data/tileCache.js";
 import { geocode, isGeocodingConfigured } from "../routing/geocode.js";
@@ -64,6 +64,9 @@ router.post("/plan", isAuthenticated, planLimit, async (request: Request, respon
         const via = request.body.via ?? [];
         if (!Array.isArray(via)) {
             return response.status(422).send(response.__("route.errors.coordinates"));
+        }
+        if (via.length > MAX_PLAN_STOPS) {
+            return response.status(422).send(response.__("route.errors.too-many-stops", String(MAX_PLAN_STOPS)));
         }
         const points = [sanitizedParams.start, ...via, sanitizedParams.end].map(parseLatLng);
         if (points.some((point) => !point)) {

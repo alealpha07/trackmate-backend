@@ -38,6 +38,9 @@ describe("register", () => {
         const long = "x".repeat(73);
         await register({ ...valid("bruno"), password: long, confirmPassword: long })
             .expect(422, text("en", "register.errors.password-long"));
+        const blank = " ".repeat(12);
+        await register({ ...valid("bruno"), password: blank, confirmPassword: blank })
+            .expect(422, text("en", "register.errors.password-short"));
         await register({ ...valid("bruno"), confirmPassword: `${PASSWORD}!` })
             .expect(422, text("en", "register.errors.passwords-not-match"));
     });
@@ -68,11 +71,19 @@ describe("register", () => {
         expect(body.username).toBe("newbie");
     });
 
-    test("at most 5 attempts an hour from one address", async () => {
+    test("at most 5 accounts an hour from one address, typos don't count", async () => {
         const ip = "203.0.113.5";
-        for (let i = 0; i < 5; i++) await register(valid("x"), "en", ip).expect(422);
+        for (let i = 0; i < 6; i++) await register(valid("x"), "en", ip).expect(422);
+        for (let i = 0; i < 5; i++) await register(valid(`batch${i}`), "en", ip).expect(200);
         await register(valid("late"), "en", ip).expect(429, text("en", "server.too-many-requests"));
         await register(valid("late"), "de", nextIp()).expect(200, text("de", "register.success"));
+    });
+
+    test("a new user gets today's quests right away", async () => {
+        await register(valid("quester")).expect(200);
+        const user = await prisma.user.findUniqueOrThrow({ where: { username: "quester" }, include: { quests: true } });
+        expect(user.quests.length).toBeGreaterThan(0);
+        expect(user.quests.every((quest) => quest.progress === 0)).toBe(true);
     });
 });
 

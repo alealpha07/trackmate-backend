@@ -6,14 +6,6 @@ import {
 
 applyTranslations();
 
-try {
-    await api("GET", "/auth/user");
-} catch (err) {
-    if (err.status !== 401) throw err;
-    location.replace("/login");
-    await new Promise(() => {}); // page is redirecting
-}
-
 const DEFAULT_CENTER = [10.3279, 44.8015]; // Parma
 const DEFAULT_ZOOM = 13;
 const SEARCH_MIN_CHARS = 3;
@@ -23,6 +15,9 @@ const MAX_LEG_METERS = 50_000;
 const EARTH_RADIUS_METERS = 6_371_008.8;
 // percent over the shortest route, null for no limit
 const MAX_DETOUR_STOPS = [10, 15, 25, 50, null];
+// same limits as the server
+const MAX_STOPS = 10;
+const MAX_NAME_LENGTH = 100;
 
 // stadia's credit is its own control so it never folds, the rest is on /credits
 const ATTRIBUTION = '&copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> '
@@ -77,6 +72,11 @@ const map = new maplibregl.Map({
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,
     attributionControl: { compact: true },
+    locale: {
+        "NavigationControl.ZoomIn": t("map.zoomIn"),
+        "NavigationControl.ZoomOut": t("map.zoomOut"),
+        "AttributionControl.ToggleAttribution": t("map.toggleAttribution"),
+    },
     style: {
         version: 8,
         sources: {
@@ -187,7 +187,10 @@ class MenuControl {
             if (!container.contains(event.target)) toggle(false);
         });
         document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") toggle(false);
+            if (event.key !== "Escape" || menu.hidden) return;
+            const wasInside = container.contains(document.activeElement);
+            toggle(false);
+            if (wasInside) button.focus();
         });
 
         container.append(button, menu);
@@ -308,6 +311,8 @@ let activeRow = null; // the row a map tap fills
 let currentRoute = null;
 let planSequence = 0; // ignore responses of outdated requests
 let planController = null; // to cancel the previous plan request
+let listCount = 0; // for unique element ids
+let stopCount = 0;
 
 const pointList = document.getElementById("point-list");
 const stopTemplate = document.getElementById("stop-template");
@@ -323,15 +328,25 @@ function formatCoordinates({ lat, lng }) {
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
-// accepts "44.8, 10.3", "44.8 10.3" and "44,8; 10,3"
-function parseCoordinates(text) {
+// accepts "44.8, 10.3", "44.8 10.3", "44,8; 10,3" and "44,8, 10,3"
+function coordinateNumbers(text) {
     const match = text.match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/)
-        ?? text.match(/^(-?\d+(?:,\d+)?)\s*[;\s]\s*(-?\d+(?:,\d+)?)$/);
-    if (!match) return null;
-    const [lat, lng] = [match[1], match[2]].map((value) => Number(value.replace(",", ".")));
-    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
-    return { lat, lng, label: null };
+        ?? text.match(/^(-?\d+(?:,\d+)?)\s*(?:[;\s]|,\s)\s*(-?\d+(?:,\d+)?)$/);
+    return match ? [match[1], match[2]].map((value) => Number(value.replace(",", "."))) : null;
 }
+
+const inRange = ([lat, lng]) => Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+
+function parseCoordinates(text) {
+    const numbers = coordinateNumbers(text);
+    if (!numbers || !inRange(numbers)) return null;
+    return { lat: numbers[0], lng: numbers[1], label: null };
+}
+
+const outOfRange = (text) => {
+    const numbers = coordinateNumbers(text);
+    return numbers !== null && !inRange(numbers);
+};
 
 function pointText(point) {
     return point ? point.label || formatCoordinates(point) : "";
@@ -476,7 +491,9 @@ function maxDetour() {
 
 function showMaxDetour() {
     const value = MAX_DETOUR_STOPS[Number(document.querySelector("input[name=maxDetour]").value)];
-    document.getElementById("max-detour-value").textContent = value === null ? t("plan.noLimit") : `${value}%`;
+    const text = value === null ? t("plan.noLimit") : `${value}%`;
+    document.getElementById("max-detour-value").textContent = text;
+    document.querySelector("input[name=maxDetour]").setAttribute("aria-valuetext", text);
 }
 
 function selectedOptions() {
@@ -493,6 +510,8 @@ function selectedOptions() {
 
 async function plan() {
     if (rows.some((row) => !row.point) || routeProblem()) return;
+    // the button is disabled while busy, which drops its focus
+    const hadFocus = document.activeElement === planButton;
     cancelPlanning();
     const sequence = planSequence;
     planController = new AbortController();
@@ -525,7 +544,10 @@ async function plan() {
         if (err.status === 401) return location.replace("/login");
         showStatus(err.message, true);
     } finally {
-        if (sequence === planSequence) setPlanning(false);
+        if (sequence === planSequence) {
+            setPlanning(false);
+            if (hadFocus && document.activeElement === document.body) (result.hidden ? planButton : result).focus();
+        }
     }
 }
 
@@ -590,15 +612,50 @@ function setupSearch(row) {
     let timer = null;
     let searchSequence = 0;
     let fullText = null; // text of the last full search
+    let active = -1; // option picked with the arrow keys
 
-    const hide = () => (list.hidden = true);
+    list.id = `suggestions-${++listCount}`;
+    list.setAttribute("role", "listbox");
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-controls", list.id);
+    input.setAttribute("aria-expanded", "false");
+
+    const options = () => [...list.querySelectorAll("button")];
+
+    function highlight(index) {
+        const items = options();
+        active = items.length > 0 ? (index + items.length) % items.length : -1;
+        items.forEach((item, i) => item.setAttribute("aria-selected", String(i === active)));
+        if (active < 0) return input.removeAttribute("aria-activedescendant");
+        input.setAttribute("aria-activedescendant", items[active].id);
+        items[active].scrollIntoView({ block: "nearest" });
+    }
+
+    function show() {
+        list.hidden = false;
+        input.setAttribute("aria-expanded", "true");
+        highlight(-1);
+    }
+
+    function hide() {
+        list.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+        active = -1;
+        input.removeAttribute("aria-activedescendant");
+    }
 
     function listButton(text, onClick, className = "") {
         const li = document.createElement("li");
+        li.setAttribute("role", "presentation");
         const button = document.createElement("button");
         button.type = "button";
         button.className = className;
         button.textContent = text;
+        // focus stays in the input, the arrow keys move between options
+        button.tabIndex = -1;
+        button.id = `${list.id}-${list.children.length}`;
+        button.setAttribute("role", "option");
         // mousedown runs before blur hides the list
         button.addEventListener("mousedown", (event) => event.preventDefault());
         button.addEventListener("click", onClick);
@@ -610,6 +667,7 @@ function setupSearch(row) {
         list.replaceChildren();
         if (items.length === 0) {
             const empty = document.createElement("li");
+            empty.setAttribute("role", "presentation");
             empty.className = "empty";
             empty.textContent = t("plan.noResults");
             list.append(empty);
@@ -622,16 +680,17 @@ function setupSearch(row) {
         }
         // stadia misses small villages
         if (!full) list.append(listButton(t("plan.searchAll"), searchAll, "search-all"));
-        list.hidden = false;
+        show();
     }
 
     function renderMessage(text) {
         list.replaceChildren();
         const li = document.createElement("li");
+        li.setAttribute("role", "presentation");
         li.className = "empty";
         li.textContent = text;
         list.append(li);
-        list.hidden = false;
+        show();
     }
 
     async function search(text, full) {
@@ -659,6 +718,7 @@ function setupSearch(row) {
 
     function useCoordinates() {
         const text = input.value.trim();
+        if (outOfRange(text)) showStatus(t("plan.coordinatesOutOfRange"), true);
         const coordinates = parseCoordinates(text);
         if (!coordinates) return false;
         hide();
@@ -674,6 +734,16 @@ function setupSearch(row) {
     });
     input.addEventListener("keydown", (event) => {
         if (event.key === "Escape") hide();
+        if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !list.hidden) {
+            event.preventDefault();
+            highlight(active + (event.key === "ArrowDown" ? 1 : -1));
+            return;
+        }
+        if (event.key === "Enter" && active >= 0) {
+            event.preventDefault();
+            options()[active].click();
+            return;
+        }
         if (event.key !== "Enter" || useCoordinates()) return;
         // first enter searches all places, second picks the first result
         if (fullText === input.value.trim() && !list.hidden) list.querySelector("button.result")?.click();
@@ -684,6 +754,7 @@ function setupSearch(row) {
         fullText = null;
         const text = input.value.trim();
         if (text.length < SEARCH_MIN_CHARS) return hide();
+        if (outOfRange(text)) return renderMessage(t("plan.coordinatesOutOfRange"));
         const coordinates = parseCoordinates(text);
         if (coordinates) return render([{ ...coordinates, label: formatCoordinates(coordinates) }], true);
         timer = setTimeout(() => search(text, false), SEARCH_DEBOUNCE_MS);
@@ -699,16 +770,27 @@ function createRow(element) {
 }
 
 function addStop() {
+    if (rows.length - 2 >= MAX_STOPS) return;
     const element = stopTemplate.content.firstElementChild.cloneNode(true);
     applyTranslations(element);
+    const input = element.querySelector("input");
+    input.id = `stop-input-${++stopCount}`;
+    element.querySelector("label").htmlFor = input.id;
     const row = createRow(element);
     element.querySelector(".remove").addEventListener("click", () => removeStop(row));
     pointList.insertBefore(element, rows[rows.length - 1].element);
     rows.splice(rows.length - 1, 0, row);
     renumberStops();
+    updateAddStop();
     activeRow = row;
     row.input.focus();
     routeChanged();
+}
+
+function updateAddStop() {
+    const button = document.getElementById("add-stop");
+    button.disabled = rows.length - 2 >= MAX_STOPS;
+    button.title = button.disabled ? t("plan.maxStops", MAX_STOPS) : "";
 }
 
 function removeStop(row) {
@@ -716,6 +798,7 @@ function removeStop(row) {
     row.element.remove();
     rows.splice(rows.indexOf(row), 1);
     renumberStops();
+    updateAddStop();
     if (activeRow === row) activeRow = firstEmptyRow() ?? rows[rows.length - 1];
     routeChanged();
 }
@@ -762,7 +845,7 @@ loadVehicles().catch((err) => showStatus(err.message, true));
 
 saveButton.addEventListener("click", async () => {
     if (!currentRoute) return;
-    const defaultName = rows.map((row) => pointText(row.point)).join(" → ");
+    const defaultName = rows.map((row) => pointText(row.point)).join(" → ").slice(0, MAX_NAME_LENGTH);
     const name = prompt(t("plan.savePrompt"), defaultName)?.trim();
     if (!name) return;
     saveButton.disabled = true;

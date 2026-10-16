@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { haversineMeters } from "../../../src/routing/haversine.js";
-import { nodeExtent, planningBBox } from "../../../src/routing/data/bbox.js";
+import { elevationExtent, nodeExtent, planningBBox } from "../../../src/routing/data/bbox.js";
 import { tilesFor } from "../../../src/routing/data/tileCache.js";
 import { BBOX_BUFFER_METERS } from "../../../src/routing/config.js";
 
@@ -41,6 +41,20 @@ describe("nodeExtent", () => {
             { type: "way", id: 3, nodes: [1, 2] },
         ], box);
         expect(extent).toEqual({ south: 44, west: 9.5, north: 45.5, east: 11 });
+    });
+});
+
+describe("elevationExtent", () => {
+    test("stops at the map tiles, so a long road leaving them pulls in no extra DEM tile", () => {
+        const box = { south: 45.02, west: 7.6, north: 45.08, east: 7.7 };
+        const extent = elevationExtent([
+            { type: "node", id: 1, lat: 44.5, lon: 7.65 },
+            { type: "node", id: 2, lat: 45.09, lon: 7.65 },
+        ], box);
+        expect(extent.south).toBeCloseTo(45, 6);
+        expect(Math.floor(extent.south)).toBe(45);
+        expect(extent.north).toBe(45.09);
+        expect(extent.west).toBe(7.6);
     });
 });
 

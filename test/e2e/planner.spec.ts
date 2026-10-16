@@ -117,3 +117,62 @@ test("logout goes back to the login page", async ({ page }) => {
     await page.goto("/plan");
     await expect(page).toHaveURL(/\/login$/);
 });
+
+test("the keyboard picks a suggestion and Tab moves on to the next field", async ({ page }) => {
+    const start = page.locator("#start-input");
+    await start.fill(START);
+    await expect(start).toHaveAttribute("aria-expanded", "true");
+    await start.press("ArrowDown");
+    const option = page.locator("#point-list .point").first().locator("[role=option]").first();
+    await expect(option).toHaveAttribute("aria-selected", "true");
+    await expect(start).toHaveAttribute("aria-activedescendant", (await option.getAttribute("id"))!);
+    await start.press("Enter");
+    await expect(page.locator(".map-pin")).toHaveCount(1);
+
+    await page.locator("#end-input").fill(END);
+    await page.locator("#end-input").press("Tab");
+    await expect(page.locator("#end-input")).not.toBeFocused();
+    await expect(page.locator("body")).not.toBeFocused();
+    await expect(page.locator(".map-pin")).toHaveCount(2);
+});
+
+test("decimal commas, and numbers out of range get a message", async ({ page }) => {
+    await setPoint(page, "#start-input", "44,7815, 9,846");
+    await expect(page.locator("#start-input")).toHaveValue("44.78150, 9.84600");
+    await page.locator("#end-input").fill("95, 10");
+    await expect(page.locator("#point-list .point").last().locator(".suggestions")).toHaveText(en["plan.coordinatesOutOfRange"]);
+});
+
+test("at most 10 stops", async ({ page }) => {
+    for (let i = 0; i < 10; i++) await page.locator("#add-stop").click();
+    await expect(page.locator(".point[data-role=stop]")).toHaveCount(10);
+    await expect(page.locator("#add-stop")).toBeDisabled();
+    await page.locator(".point[data-role=stop] .remove").first().click();
+    await expect(page.locator("#add-stop")).toBeEnabled();
+});
+
+test("an unreachable server is a translated message, and focus stays usable after planning", async ({ page, consoleErrors }) => {
+    await setPoint(page, "#start-input", START);
+    await setPoint(page, "#end-input", END);
+    await page.route("**/route/plan?stream=1", (route) => route.abort("internetdisconnected"));
+    await page.locator("#plan").focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#status")).toHaveText(en["error.offline"]);
+    await expect(page.locator("#plan")).toBeFocused();
+    // the browser logs the failed request itself
+    expect(consoleErrors.splice(0)).toEqual(["Failed to load resource: net::ERR_INTERNET_DISCONNECTED"]);
+
+    await page.unroute("**/route/plan?stream=1");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#result")).toBeFocused();
+});
+
+test("buttons and the slider have names in the page language", async ({ page }) => {
+    await expect(page.locator("#reverse")).toHaveAttribute("aria-label", en["plan.reverse"]);
+    await expect(page.locator("input[name=maxDetour]")).toHaveAttribute("aria-label", en["plan.maxDetour"]);
+    await expect(page.locator("input[name=maxDetour]")).toHaveAttribute("aria-valuetext", "25%");
+    await page.locator("#add-stop").click();
+    const stop = page.locator(".point[data-role=stop]");
+    await expect(stop.locator(".remove")).toHaveAttribute("aria-label", en["plan.removeStop"]);
+    await expect(stop.locator("input")).toHaveAccessibleName(/1/);
+});

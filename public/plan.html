@@ -39,7 +39,7 @@
                 </ol>
                 <div class="point-actions">
                     <button id="add-stop" class="text-button" type="button" data-i18n="plan.addStop"></button>
-                    <button id="reverse" class="icon-button" type="button" data-i18n-title="plan.reverse" aria-label="reverse">⇅</button>
+                    <button id="reverse" class="icon-button" type="button" data-i18n-title="plan.reverse" data-i18n-label="plan.reverse">⇅</button>
                 </div>
                 <p class="hint muted" data-i18n="plan.legLimitHint"></p>
             </section>
@@ -49,7 +49,7 @@
                     <label><span class="pin"></span><span class="name"></span></label>
                     <div class="field">
                         <input autocomplete="off" data-i18n-placeholder="plan.stopPlaceholder">
-                        <button class="remove" type="button" data-i18n-title="plan.removeStop" aria-label="remove">×</button>
+                        <button class="remove" type="button" data-i18n-title="plan.removeStop" data-i18n-label="plan.removeStop">×</button>
                     </div>
                     <ul class="suggestions card" hidden></ul>
                 </li>
@@ -75,7 +75,7 @@
                     <label class="toggle" data-i18n-title="plan.avoidLts4Hint"><input type="checkbox" name="avoidLts4" checked><span data-i18n="plan.avoidLts4"></span></label>
                     <label class="detour" data-i18n-title="plan.maxDetourHint">
                         <span class="detour-head"><span data-i18n="plan.maxDetour"></span><output id="max-detour-value"></output></span>
-                        <input type="range" name="maxDetour" min="0" max="4" step="1" value="2">
+                        <input type="range" name="maxDetour" min="0" max="4" step="1" value="2" data-i18n-label="plan.maxDetour">
                     </label>
                 </fieldset>
 
@@ -88,7 +88,7 @@
             <button id="plan" class="button plan-button" type="button" disabled><span class="spinner" aria-hidden="true"></span><span class="label" data-i18n="plan.plan"></span></button>
             <p id="status" class="status muted" role="status" hidden></p>
 
-            <section id="result" class="result" hidden>
+            <section id="result" class="result" tabindex="-1" data-i18n-label="plan.result" hidden>
                 <dl>
                     <div><dt data-i18n="plan.distance"></dt><dd id="distance"></dd></div>
                     <div><dt data-i18n="plan.duration"></dt><dd id="duration"></dd></div>

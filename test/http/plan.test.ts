@@ -45,6 +45,8 @@ describe("POST /route/plan input", () => {
         await plan({ start: { lat: 91, lng: 9 } }).expect(422, text("en", "route.errors.coordinates"));
         await plan({ end: { lat: "x", lng: 9 } }).expect(422, text("en", "route.errors.coordinates"));
         await plan({ via: { lat: 44, lng: 9 } }).expect(422, text("en", "route.errors.coordinates"));
+        const stops = (count: number) => Array.from({ length: count }, () => ({ lat: 44.78, lng: 9.85 }));
+        await plan({ via: stops(11) }).expect(422, text("en", "route.errors.too-many-stops", "10"));
         await plan({ vehicle: "car" }).expect(422, text("en", "route.errors.vehicle"));
         await plan({ policy: "fastest" }).expect(422, text("en", "route.errors.policy"));
         await plan({ filters: { avoidHills: true } }).expect(422, text("en", "route.errors.filters"));

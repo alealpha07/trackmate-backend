@@ -54,6 +54,12 @@ describe("GET /search", () => {
         expect(await first("posts")).toMatchObject({ username: "hillrider", postsCount: 1 });
     });
 
+    test("120 searches a minute, so typing never hits the limit", async () => {
+        const { agent } = await signIn(app, "fasttyper");
+        for (let i = 0; i < 120; i++) await agent.get("/search").query({ text: "h" }).expect(200);
+        await agent.get("/search").query({ text: "h" }).expect(429, text("en", "server.too-many-requests"));
+    });
+
     test("needs one text", async () => {
         await searcher.get("/search").expect(422, /^Missing required parameters/);
         await searcher.get("/search?text=hill&text=walk").expect(422, text("en", "server.bad-request"));

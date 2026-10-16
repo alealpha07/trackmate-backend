@@ -65,7 +65,8 @@
 			"hidden": "Diese Strecke ist nicht verfügbar: sie ist privat!",
 			"file": "Ungültige Streckendatei!",
 			"travel-missing": "Fahrt nicht gefunden!",
-			"travel-not-owner": "Nur der Besitzer kann diese Fahrt ändern!"
+			"travel-not-owner": "Nur der Besitzer kann diese Fahrt ändern!",
+			"name": "Der Name muss 1 bis %s Zeichen lang sein!"
 		}
 	},
 	"friend": {
@@ -93,7 +94,8 @@
 		},
 		"errors": {
 			"missing": "Beitrag fehlt!",
-			"not-owner": "Nur der Autor kann diesen Beitrag ändern!"
+			"not-owner": "Nur der Autor kann diesen Beitrag ändern!",
+			"length": "Der Titel darf höchstens %s Zeichen haben und die Beschreibung %s!"
 		}
 	},
 	"quest": {
@@ -183,7 +185,8 @@
 			"instructions-too-long": "Diese Strecke ist zu lang für Abbiegehinweise!",
 			"plan-running": "Es wird bereits eine Route geplant, warte bis sie fertig ist!",
 			"plan-busy": "Der Planer ist ausgelastet, versuche es in einer Minute erneut!",
-			"plan-limit": "Zu viele Routen geplant, warte ein paar Minuten und versuche es erneut!"
+			"plan-limit": "Zu viele Routen geplant, warte ein paar Minuten und versuche es erneut!",
+			"too-many-stops": "Höchstens %s Zwischenstopps pro Route!"
 		},
 		"points": {
 			"start": "Start",

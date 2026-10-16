@@ -12,6 +12,10 @@ const router = express.Router();
 const POST_WITH_AUTHOR = { Track: { include: { user: { select: PUBLIC_USER } } } } as const;
 
 const hasTexts = (params: any) => typeof params.title === "string" && typeof params.description === "string";
+export const MAX_POST_TITLE_LENGTH = 100;
+export const MAX_POST_DESCRIPTION_LENGTH = 2000;
+const textsTooLong = (params: any) =>
+    params.title.length > MAX_POST_TITLE_LENGTH || params.description.length > MAX_POST_DESCRIPTION_LENGTH;
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -151,6 +155,10 @@ router.post("/", isAuthenticated, async (request: Request, response: Response): 
         if (!hasTexts(sanitizedParams)) {
             return response.status(422).send(response.__("server.bad-request"));
         }
+        if (textsTooLong(sanitizedParams)) {
+            return response.status(422).send(response.__("post.errors.length",
+                String(MAX_POST_TITLE_LENGTH), String(MAX_POST_DESCRIPTION_LENGTH)));
+        }
         const track = await prisma.track.findUnique({ where: { id: trackId }, select: { userId: true } });
         if (!track) {
             return response.status(404).send(response.__("track.errors.missing"));
@@ -193,6 +201,10 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
 
         if (!hasTexts(sanitizedParams)) {
             return response.status(422).send(response.__("server.bad-request"));
+        }
+        if (textsTooLong(sanitizedParams)) {
+            return response.status(422).send(response.__("post.errors.length",
+                String(MAX_POST_TITLE_LENGTH), String(MAX_POST_DESCRIPTION_LENGTH)));
         }
         const post = await findOwnPost(response, sanitizedParams.id, (request.user as User).id);
         if (!post) return;

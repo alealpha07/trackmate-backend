@@ -34,6 +34,8 @@ describe("shared posts, /p/:id", () => {
         expect(response.text).toContain(`<meta property="og:title" content="Lake">`);
         expect(response.text).toMatch(new RegExp(`<meta property="og:url" content="https://[^"]+/p/${pictureId}">`));
         expect(response.text).toMatch(new RegExp(`<meta property="og:image" content="https://[^"]+/p/${pictureId}/image">`));
+        // relative, so the CSP allows it on any host
+        expect(response.text).toContain(`<img class="cover" src="/p/${pictureId}/image"`);
         expect(response.text).toContain(`<span class="user">sharer</span>`);
         expect(response.text).toContain(`<a href="/privacy?lang=en">`);
     });
@@ -116,11 +118,28 @@ describe("headers and the front door", () => {
         expect(response.headers["x-powered-by"]).toBeUndefined();
     });
 
+    test("the licences linked from the credits page", async () => {
+        const credits = await client(app).get("/credits").expect(200);
+        for (const [, href] of credits.text.matchAll(/href="(\/vendor\/[^"]+)"/g)) {
+            await client(app).get(href).expect(200);
+        }
+    });
+
     test("/ sends visitors to the login and users to the planner", async () => {
         await client(app).get("/").redirects(0).expect(302).expect("Location", "/login");
         const { agent } = await signIn(app, "visitor");
         await agent.get("/").redirects(0).expect(302).expect("Location", "/plan");
         await client(app).get("/login").expect(200).expect("Content-Type", /^text\/html/);
+    });
+
+    test("the pages send each other's visitors on, so they never ask /auth/user", async () => {
+        await client(app).get("/plan").redirects(0).expect(302).expect("Location", "/login");
+        await client(app).get("/register").expect(200).expect("Content-Type", /^text\/html/);
+        const { agent } = await signIn(app, "returning");
+        await agent.get("/plan").expect(200).expect("Content-Type", /^text\/html/);
+        for (const page of ["/login", "/register"]) {
+            await agent.get(page).redirects(0).expect(302).expect("Location", "/plan");
+        }
     });
 
     test("bodies that are too large or broken", async () => {

@@ -24,7 +24,8 @@ export async function checkPassword(userId: number, password: unknown): Promise<
 
 // a locale key, or null when the password is fine
 export function passwordProblem(password: unknown): string | null {
-    if (typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) return "register.errors.password-short";
+    // spaces around it don't count, so a blank password is too short
+    if (typeof password !== "string" || password.trim().length < PASSWORD_MIN_LENGTH) return "register.errors.password-short";
     if (Buffer.byteLength(password) > PASSWORD_MAX_BYTES) return "register.errors.password-long";
     return null;
 }

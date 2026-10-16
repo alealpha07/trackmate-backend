@@ -4,6 +4,7 @@ import { User, Vehicle } from "../generated/prisma/client.js";
 import { sanitizeParams, prisma, isAuthenticated, PUBLIC_USER, deleteUserSessions } from "../utils.js";
 import { checkPassword, hashPassword, passwordProblem } from "../passportConfig.js";
 import { passwordLimit, registerLimit } from "../limits.js";
+import { dailyQuests } from "../quests.js";
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,30}$/;
 const router = express.Router();
 
@@ -33,13 +34,16 @@ router.post("/register", registerLimit, async (request: Request, response: Respo
             return response.status(422).send(response.__("register.errors.terms"));
         }
 
+        const vehicles = Object.values(Vehicle);
         await prisma.user.create({
             data: {
                 username: sanitizedParams.username,
                 password: await hashPassword(sanitizedParams.password),
                 termsAcceptedAt: new Date(),
                 // all vehicles by default
-                vehicles: { create: Object.values(Vehicle).map((vehicle) => ({ vehicle })) }
+                vehicles: { create: vehicles.map((vehicle) => ({ vehicle })) },
+                // the cron job only runs at midnight
+                quests: { create: dailyQuests(vehicles) }
             }
         })
         response.send(response.__("register.success"));

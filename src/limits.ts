@@ -12,6 +12,7 @@ interface LimitOptions {
     message?: string;
     keyGenerator?: (request: Request) => string;
     failuresOnly?: boolean;
+    successesOnly?: boolean;
 }
 
 const limiter = (windowMs: number, limit: number, options: LimitOptions = {}) => rateLimit({
@@ -19,6 +20,7 @@ const limiter = (windowMs: number, limit: number, options: LimitOptions = {}) =>
     limit,
     keyGenerator: options.keyGenerator ?? userOrIp,
     skipSuccessfulRequests: options.failuresOnly ?? false,
+    skipFailedRequests: options.successesOnly ?? false,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: (request: Request, response: Response) =>
@@ -33,13 +35,15 @@ export const passwordLimit = limiter(15 * MINUTE_MS, 10, {
         request.user ? userOrIp(request) : `${ipKeyGenerator(request.ip ?? "")}|${String(request.body?.username ?? "")}`,
     failuresOnly: true,
 });
-export const registerLimit = limiter(HOUR_MS, 5);
+// typos don't count, only accounts made
+export const registerLimit = limiter(HOUR_MS, 5, { successesOnly: true });
 export const fileLimit = limiter(HOUR_MS, 30);
-export const searchLimit = limiter(MINUTE_MS, 30);
+export const searchLimit = limiter(MINUTE_MS, 120);
 // Stadia credits
 export const geocodeLimit = limiter(MINUTE_MS, 30, { message: "route.errors.geocoding-limit" });
 export const instructionsLimit = limiter(MINUTE_MS, 10);
-export const planLimit = limiter(10 * MINUTE_MS, 20, { message: "route.errors.plan-limit" });
+// trying filters replans each time; takePlanSlot guards the CPU
+export const planLimit = limiter(10 * MINUTE_MS, 60, { message: "route.errors.plan-limit" });
 
 // planning is CPU and memory heavy, so few run at once
 const planning = new Set<number>();

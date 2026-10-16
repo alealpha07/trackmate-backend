@@ -180,8 +180,12 @@ export async function loadElevation(bbox: BBox, signal: AbortSignal): Promise<El
         };
         grids.set(`${tile.lat},${tile.lon}`, ground(await readGrid(name, part), DEM_GROUND_RADIUS));
     }
+    const inside = (lat: number, lon: number) =>
+        lat >= bbox.south && lat <= bbox.north && lon >= bbox.west && lon <= bbox.east;
     return (lat, lon) => {
         const grid = grids.get(`${Math.floor(lat)},${Math.floor(lon)}`);
-        return grid ? sample(grid, lat, lon) : 0;
+        if (grid) return sample(grid, lat, lon);
+        // no DEM file (sea) is 0, beyond the loaded area is unknown
+        return inside(lat, lon) ? 0 : NaN;
     };
 }

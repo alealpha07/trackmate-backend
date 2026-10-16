@@ -16,15 +16,19 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 1 }
 // a day of recording at one point a second
 const MAX_TRACK_POINTS = 100_000;
 const TRAVEL_VALUES = ["time", "averageSpeed", "maxSpeed", "distance"];
+export const MAX_TRACK_NAME_LENGTH = 100;
 
 const isAmount = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value >= 0;
+const isNumber = (value: unknown) => typeof value === "number" && Number.isFinite(value);
+const isTrackName = (name: unknown) =>
+    typeof name === "string" && name.trim() !== "" && name.length <= MAX_TRACK_NAME_LENGTH;
 
 function vehicleFilter(query: any): Vehicle | undefined | null {
     if (query.vehicle === undefined || query.vehicle === "") return undefined;
     return parseVehicle(query.vehicle);
 }
 
-// the app and the planner both write { track: [{ lat, lng, ... }] }
+// the app and the planner both write { track: [{ lat, lng, timestamp, speed? }] }, the app needs the timestamp
 function isTrackFile(buffer: Buffer): boolean {
     let file: any;
     try {
@@ -35,7 +39,8 @@ function isTrackFile(buffer: Buffer): boolean {
     const points = file?.track;
     return Array.isArray(points) && points.length <= MAX_TRACK_POINTS && points.every((point: any) =>
         typeof point?.lat === "number" && Math.abs(point.lat) <= 90 &&
-        typeof point?.lng === "number" && Math.abs(point.lng) <= 180
+        typeof point?.lng === "number" && Math.abs(point.lng) <= 180 &&
+        isNumber(point.timestamp) && (point.speed === undefined || isNumber(point.speed))
     );
 }
 
@@ -202,6 +207,9 @@ router.post("/", isAuthenticated, async (request: Request, response: Response): 
         }
         if (typeof sanitizedParams.name !== "string") {
             return response.status(422).send(response.__("server.bad-request"));
+        }
+        if (!isTrackName(sanitizedParams.name)) {
+            return response.status(422).send(response.__("track.errors.name", String(MAX_TRACK_NAME_LENGTH)));
         }
         const vehicle = parseVehicle(sanitizedParams.vehicle);
         if (!vehicle) {
@@ -536,6 +544,9 @@ router.put("/", isAuthenticated, async (request: Request, response: Response): P
         }
         if (typeof sanitizedParams.name !== "string") {
             return response.status(422).send(response.__("server.bad-request"));
+        }
+        if (!isTrackName(sanitizedParams.name)) {
+            return response.status(422).send(response.__("track.errors.name", String(MAX_TRACK_NAME_LENGTH)));
         }
         const userId = (request.user as User).id;
         const vehicle = request.body.vehicle == null ? undefined : parseVehicle(request.body.vehicle);

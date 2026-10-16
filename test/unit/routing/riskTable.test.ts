@@ -10,6 +10,10 @@ describe("routeType", () => {
         expect(routeType({ highway: "footway", bicycle: "yes" }, "none", false, true)).toBe("sidewalk");
         expect(routeType({ highway: "footway", bicycle: "designated" }, "none", false, true)).toBe("multiuse_paved");
         expect(routeType({ highway: "track" }, "none", false, false)).toBe("multiuse_unpaved");
+        // next to a major road, as Teschke defines a cycle track
+        expect(routeType({ highway: "cycleway" }, "none", false, true, true)).toBe("cycle_track");
+        expect(routeType({ highway: "footway", bicycle: "designated", segregated: "yes" }, "none", false, true)).toBe("bike_path");
+        expect(routeType({ highway: "path", bicycle: "designated", foot: "designated" }, "none", false, true, true)).toBe("multiuse_paved");
     });
 
     test("streets", () => {

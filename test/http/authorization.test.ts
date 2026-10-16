@@ -22,7 +22,8 @@ const MOUNTS: [Router, string][] = [
 
 // a new route goes in one of these two lists
 const PUBLIC = [
-    "GET /", "GET /privacy", "GET /terms", "GET /.well-known/assetlinks.json", "GET /p/:id", "GET /p/:id/image",
+    "GET /", "GET /login", "GET /register", "GET /plan", "GET /privacy", "GET /terms", "GET /.well-known/assetlinks.json",
+    "GET /p/:id", "GET /p/:id/image",
     "POST /auth/register", "POST /auth/login", "POST /auth/logout",
 ];
 const PROTECTED = [
