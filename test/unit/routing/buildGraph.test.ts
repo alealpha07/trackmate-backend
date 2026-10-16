@@ -111,29 +111,6 @@ describe("buildGraph", () => {
         expect(primary.lts).toBe(4);
     });
 
-    test("bike-only paths next to a major road are cycle tracks", () => {
-        // the primary runs east along y = 0
-        const nodes = [
-            node(70, 0, 12), node(71, 100, 12), node(72, 0, 80), node(73, 100, 80),
-            node(74, 250, -60), node(75, 250, 60),
-        ];
-        const typeOf = (wayId: number, tags: Tags, ids: number[]) => buildGraph([
-            ...NODES, ...nodes, way(76, [1, 2, 3, 4], { highway: "primary" }), way(wayId, ids, tags),
-        ], BBOX).edges.find((e) => e.id === `${wayId}:0:f`)!.routeType;
-        expect(typeOf(77, { highway: "cycleway" }, [70, 71])).toBe("cycle_track");
-        expect(typeOf(77, { highway: "cycleway", is_sidepath: "no" }, [70, 71])).toBe("bike_path");
-        expect(typeOf(77, { highway: "cycleway", surface: "gravel" }, [70, 71])).toBe("bike_path");
-        expect(typeOf(77, { highway: "footway", bicycle: "designated", segregated: "yes" }, [70, 71])).toBe("cycle_track");
-        expect(typeOf(77, { highway: "footway", bicycle: "designated" }, [70, 71])).toBe("multiuse_paved");
-        // too far, or crossing the road
-        expect(typeOf(77, { highway: "cycleway" }, [72, 73])).toBe("bike_path");
-        expect(typeOf(77, { highway: "cycleway" }, [74, 75])).toBe("bike_path");
-        // next to a residential street it stays a bike path
-        expect(buildGraph([...NODES, ...nodes, way(78, [1, 2], { highway: "residential" }),
-            way(79, [70, 71], { highway: "cycleway" })], BBOX).edges.find((e) => e.id === "79:0:f")!.routeType)
-            .toBe("bike_path");
-    });
-
     test("heights beyond the loaded area count as flat", () => {
         const elevation = (_lat: number, lon: number) => (lon < 10.331 ? 100 : NaN);
         const edges = buildGraph([...NODES, way(80, [1, 2, 3], { highway: "residential" })], BBOX, elevation).edges;

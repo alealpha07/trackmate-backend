@@ -67,9 +67,6 @@ export const DEM_GROUND_RADIUS = 5;
 export const DOWNHILL_GRADE = -0.03;
 // tracks were counted within a 5 m wide site (Harris 2013), so a crossing weighs 5 m, whatever the node spacing
 export const CROSSING_SITE_METERS = 5;
-// a bike-only path this close to a major road, and running with it, is a cycle track
-export const SIDEPATH_MAX_METERS = 20;
-export const SIDEPATH_MAX_ANGLE_DEGREES = 30;
 
 // degrees, about 5.5 km
 export const TILE_SIZE_DEG = 0.05;

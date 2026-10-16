@@ -4,10 +4,9 @@ import { haversineMeters } from "../haversine.js";
 import { levelOfTrafficStress } from "./lts.js";
 import {
     bicycleAllowed, bicycleDirection, bikeInfra, drivingSide, drivingSideIn, hasConstruction,
-    hasEmbeddedRails, hasParkedCars, isPaved, PATH_HIGHWAYS,
+    hasEmbeddedRails, hasParkedCars, isPaved,
 } from "./osmTags.js";
 import { HAZARD_OR, ROUTE_TYPE_OR, routeType } from "./riskTable.js";
-import { besideMajorRoad } from "./sidepath.js";
 import {
     BBox, Direction, DrivingSide, Elevation, GraphEdge, OverpassElement, OverpassNode, OverpassWay, RoutingGraph, Tags,
 } from "../types.js";
@@ -25,11 +24,11 @@ function isRoutable(tags: Tags): boolean {
     return true;
 }
 
-function edgeProfile(tags: Tags, direction: Direction, driving: DrivingSide, besideMajor = false) {
+function edgeProfile(tags: Tags, direction: Direction, driving: DrivingSide) {
     const infra = bikeInfra(tags, direction, driving);
     const parked = hasParkedCars(tags, direction, driving);
     const paved = isPaved(tags);
-    const type = routeType(tags, infra, parked, paved, besideMajor);
+    const type = routeType(tags, infra, parked, paved);
     return {
         routeType: type,
         risk: ROUTE_TYPE_OR[type]
@@ -93,7 +92,6 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
     const crossing = (to: number, distance: number) => (railNodes.has(to)
         ? 1 + ((HAZARD_OR.tracks - 1) * Math.min(CROSSING_SITE_METERS, distance)) / distance
         : 1);
-    const besideMajor = besideMajorRoad(ways, nodeById);
     const graphSide = drivingSideIn(nodeExtent(elements, bbox));
 
     const usedNodeIds = new Set<number>();
@@ -111,15 +109,6 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
         const only = bicycleDirection(tags);
         const forward = only === "backward" ? null : edgeProfile(tags, "forward", driving);
         const backward = only === "forward" ? null : edgeProfile(tags, "backward", driving);
-        // the same path as a cycle track, used where it runs next to a major road
-        const asSidepath = PATH_HIGHWAYS.includes(tags.highway)
-            ? {
-                forward: forward && edgeProfile(tags, "forward", driving, true),
-                backward: backward && edgeProfile(tags, "backward", driving, true),
-            }
-            : null;
-        const mayBeSidepath = asSidepath !== null
-            && (asSidepath.forward ?? asSidepath.backward)!.routeType !== (forward ?? backward)!.routeType;
         // the street is the rail line itself, its own nodes aren't crossings
         const onRails = RAILWAYS.includes(tags.railway ?? "");
         const crossingOf = (to: number, distance: number) => (onRails ? 1 : crossing(to, distance));
@@ -141,19 +130,16 @@ export function buildGraph(elements: OverpassElement[], bbox: BBox, elevation?: 
             usedNodeIds.add(b.id);
 
             const grade = grades[i];
-            const sidepath = mayBeSidepath && besideMajor(a, b);
-            const there = sidepath ? asSidepath!.forward : forward;
-            const back = sidepath ? asSidepath!.backward : backward;
-            if (there) {
+            if (forward) {
                 edges.push({
-                    id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...there, grade,
-                    risk: there.risk * crossingOf(b.id, distance) * downhill(grade),
+                    id: `${way.id}:${i}:f`, from: a.id, to: b.id, distance, ...forward, grade,
+                    risk: forward.risk * crossingOf(b.id, distance) * downhill(grade),
                 });
             }
-            if (back) {
+            if (backward) {
                 edges.push({
-                    id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...back, grade: -grade,
-                    risk: back.risk * crossingOf(a.id, distance) * downhill(-grade),
+                    id: `${way.id}:${i}:b`, from: b.id, to: a.id, distance, ...backward, grade: -grade,
+                    risk: backward.risk * crossingOf(a.id, distance) * downhill(-grade),
                 });
             }
         }
