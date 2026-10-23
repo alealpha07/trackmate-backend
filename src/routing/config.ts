@@ -63,8 +63,8 @@ export const INSTRUCTIONS_CACHE_MAX_MB = Number(process.env.INSTRUCTIONS_CACHE_M
 export const GRADE_WINDOW_METERS = 200;
 // ground filter radius in pixels, removes roofs and trees from the elevation
 export const DEM_GROUND_RADIUS = 5;
-// gentler descents are just noise in flat cities
-export const DOWNHILL_GRADE = -0.03;
+// AASHTO Guide for the Development of Bicycle Facilities: 5% is the grade limit for bike paths
+export const DOWNHILL_GRADE = -0.05;
 // tracks were counted within a 5 m wide site (Harris 2013), so a crossing weighs 5 m, whatever the node spacing
 export const CROSSING_SITE_METERS = 5;
 

@@ -102,6 +102,15 @@ describe("buildGraph", () => {
         expect(west.risk).toBeCloseTo(ROUTE_TYPE_OR.local * HAZARD_OR.downhill);
     });
 
+    test("descents gentler than 5% are not downhill", () => {
+        // 4% up going east
+        const elevation = (_lat: number, lon: number) => (lon - 10.33) * 78_800 * 0.04;
+        const edges = buildGraph([...NODES, way(24, [1, 2, 3, 4], { highway: "residential" })], BBOX, elevation).edges;
+        const west = edges.find((e) => e.id === "24:1:b")!;
+        expect(west.grade).toBeCloseTo(-0.04, 2);
+        expect(west.risk).toBe(ROUTE_TYPE_OR.local);
+    });
+
     test("filter flags", () => {
         const [cycleway] = edgesOf([way(21, [1, 2], { highway: "cycleway" })]);
         expect(cycleway).toMatchObject({ bikeway: true, unpaved: false, lts: 1 });
