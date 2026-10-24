@@ -15,3 +15,6 @@ appcache
 src/generated/
 # made by npm run test:coverage
 coverage
+# made by npm run benchmark
+benchmark/cache
+benchmark/out
