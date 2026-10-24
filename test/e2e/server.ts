@@ -21,7 +21,8 @@ const sub = (name: string) => {
 };
 
 const databaseUrl = `file:${path.join(root, "e2e.db")}`;
-execFileSync(path.join(BACKEND_DIR, "node_modules", ".bin", "prisma"), ["migrate", "deploy"], {
+// through node, .bin/prisma is a shell script that Windows can't spawn
+execFileSync(process.execPath, [path.join(BACKEND_DIR, "node_modules", "prisma", "build", "index.js"), "migrate", "deploy"], {
     cwd: BACKEND_DIR,
     env: { ...process.env, DATABASE_URL: databaseUrl },
     stdio: "pipe",
