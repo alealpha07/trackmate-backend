@@ -7,7 +7,7 @@ const router = express.Router();
 
 const LEGAL_DIR = path.join(import.meta.dirname, "..", "..", "legal");
 // bump when a text changes
-const UPDATED = { privacy: "2026-10-15", terms: "2026-10-15" };
+const UPDATED = { privacy: "2026-10-24", terms: "2026-10-15" };
 const LANGUAGES = [
     { id: "en", name: "English" },
     { id: "it", name: "Italiano" },
