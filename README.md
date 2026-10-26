@@ -55,6 +55,20 @@ starts its own server on port 3917 with a temporary database. Map tiles are repl
 fails on any request to another host or any console error. The first time, install the browser with
 `npx playwright install chromium`.
 
+## Routing benchmark
+
+```bash
+npm run benchmark                                # every stage
+npm run benchmark -- --only routes,analyze       # some stages: data, valhalla, routes, analyze, figures
+npm run benchmark -- --cities milan,parma        # some cities
+npm run benchmark -- --only analyze,figures --lang en  # tables, charts and maps in en, it or de
+```
+
+Compares Shortest, Safest and Safest with the app's default filters, and Valhalla's bicycle routes, in Milan, Parma,
+Turin, Berlin, Munich and Frankfurt. There are 30 seeded random pairs per city, 1.5 to 6 km apart in a straight line.
+The planner runs in process. Every route is scored with the same risk model, and Valhalla's route is matched onto the
+OpenStreetMap graph through its way ids.
+
 ## Docker
 
 ```bash
