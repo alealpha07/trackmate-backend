@@ -10,6 +10,7 @@ import {
 import { loadNetwork } from "./graph.js";
 import { Pair, outPath, readJson, writeJson } from "./io.js";
 import { Score, scoreEdges } from "./score.js";
+import { TagStats, tagStats } from "./tags.js";
 
 export const SNAPSHOT_FILE = path.join(CACHE_DIR, "snapshot.json");
 
@@ -77,6 +78,7 @@ async function withRetries<T>(task: () => Promise<T>, attempts = 20): Promise<T>
 export async function runData() {
     const pairs: Record<string, Pair[]> = {};
     const network: Record<string, Score> = {};
+    const tags: Record<string, TagStats> = {};
     let downloaded = 0;
 
     for (const city of CITIES) {
@@ -99,6 +101,7 @@ export async function runData() {
         });
         inBox.forEach((e) => perSegment.set(segment(e), (perSegment.get(segment(e)) ?? 0) + 1));
         network[city.id] = scoreEdges(net, inBox, (e) => 1 / perSegment.get(segment(e))!);
+        tags[city.id] = tagStats(net.elements, city.box);
 
         const candidates = Object.keys(graph.nodes)
             .filter((id) => graph.nodes[id].snappable && inside(city.box, graph.nodes[id].lat, graph.nodes[id].lon))
@@ -128,4 +131,5 @@ export async function runData() {
     }
     writeJson(outPath("pairs.json"), pairs);
     writeJson(outPath("network.json"), network);
+    writeJson(outPath("tags.json"), tags);
 }

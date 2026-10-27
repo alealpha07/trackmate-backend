@@ -1,5 +1,5 @@
 import type { RouteType } from "../src/routing/types.js";
-import { GroupId, HazardId, LANGUAGE, Language, VariantId } from "./config.js";
+import { GroupId, HazardId, LANGUAGE, Language, TagCheckId, VariantId } from "./config.js";
 
 export interface Strings {
     decimal: string;
@@ -10,6 +10,7 @@ export interface Strings {
     groups: Record<GroupId, string>;
     routeTypes: Record<RouteType, string>;
     hazards: Record<HazardId, string>;
+    tags: Record<TagCheckId | "tramTracks" | "embeddedRails", string>;
     roles: { best: string; median: string; worst: string };
     chart: {
         network: string;
@@ -50,6 +51,7 @@ export interface Strings {
         timingCaption: (repeats: number) => string;
         compositionCaption: string;
         showcaseCaption: string;
+        tagsCaption: string;
     };
 }
 
@@ -91,6 +93,15 @@ const it: Strings = {
         parked: "Principale con sosta (m/km)",
         unpaved: "Fondo non pavimentato (m/km)",
     },
+    tags: {
+        parking: "Sosta",
+        maxspeed: "Limite",
+        sidepath: "Piste laterali",
+        designated: "Percorsi condivisi",
+        surface: "Fondo",
+        tramTracks: "Binari tram (km)",
+        embeddedRails: "Binari su strada (km)",
+    },
     roles: { best: "caso migliore", median: "caso mediano", worst: "caso peggiore" },
     chart: {
         network: "rete",
@@ -131,6 +142,7 @@ const it: Strings = {
         timingCaption: (repeats) => `Tempo di calcolo del planner con il grafo già in memoria (ms, mediana / 95° percentile su ${repeats} ripetizioni per coppia) e costruzione del grafo a freddo (s, mediana).`,
         compositionCaption: "Composizione della rete ciclabile nelle aree di studio per tipo di strada del modello di rischio (\\% della lunghezza).",
         showcaseCaption: "Casi showcase: per ogni città la coppia migliore, le due mediane e la peggiore per riduzione del rischio di Safest rispetto al più sicuro tra Shortest e Valhalla.",
+        tagsCaption: "Completezza dei tag OpenStreetMap nelle aree di studio (\\% della lunghezza): strade principali con tag \\texttt{parking:*} e con \\texttt{maxspeed}, piste \\texttt{highway=cycleway} con \\texttt{is\\_sidepath=yes}, percorsi pedonali con \\texttt{bicycle=designated}, percorsi con \\texttt{surface} o \\texttt{tracktype}. Binari del tram mappati come vie separate, ogni binario contato, e strade con binari incorporati (km).",
     },
 };
 
@@ -172,6 +184,15 @@ const en: Strings = {
         parked: "Major with parking (m/km)",
         unpaved: "Unpaved (m/km)",
     },
+    tags: {
+        parking: "Parking",
+        maxspeed: "Speed limit",
+        sidepath: "Sidepaths",
+        designated: "Shared paths",
+        surface: "Surface",
+        tramTracks: "Tram tracks (km)",
+        embeddedRails: "Rails in road (km)",
+    },
     roles: { best: "best case", median: "median case", worst: "worst case" },
     chart: {
         network: "network",
@@ -212,6 +233,7 @@ const en: Strings = {
         timingCaption: (repeats) => `Planning time with the graph in memory (ms, median / 95th percentile over ${repeats} runs per pair) and cold graph build (s, median).`,
         compositionCaption: "Composition of the bike network in the study areas by road type of the risk model (\\% of length).",
         showcaseCaption: "Showcase pairs: per city the best, the two median and the worst pair by Safest's risk reduction against the safer of Shortest and Valhalla.",
+        tagsCaption: "Completeness of the OpenStreetMap tags in the study areas (\\% of length): major roads with a \\texttt{parking:*} tag and with \\texttt{maxspeed}, \\texttt{highway=cycleway} with \\texttt{is\\_sidepath=yes}, footways with \\texttt{bicycle=designated}, paths with \\texttt{surface} or \\texttt{tracktype}. Tram tracks mapped as their own ways, each track counted, and streets with rails in the road (km).",
     },
 };
 
@@ -253,6 +275,15 @@ const de: Strings = {
         parked: "Hauptstraße mit Parken (m/km)",
         unpaved: "Unbefestigt (m/km)",
     },
+    tags: {
+        parking: "Parken",
+        maxspeed: "Tempolimit",
+        sidepath: "Begleitwege",
+        designated: "Gemeinsame Wege",
+        surface: "Belag",
+        tramTracks: "Straßenbahngleise (km)",
+        embeddedRails: "Gleise in der Fahrbahn (km)",
+    },
     roles: { best: "bester Fall", median: "mittlerer Fall", worst: "schlechtester Fall" },
     chart: {
         network: "Netz",
@@ -293,6 +324,7 @@ const de: Strings = {
         timingCaption: (repeats) => `Rechenzeit mit dem Graph im Speicher (ms, Median / 95. Perzentil über ${repeats} Läufe pro Paar) und kalter Graphaufbau (s, Median).`,
         compositionCaption: "Zusammensetzung des Radnetzes in den Untersuchungsgebieten nach Straßentyp des Risikomodells (\\% der Länge).",
         showcaseCaption: "Beispielpaare: pro Stadt das beste, die zwei mittleren und das schlechteste Paar nach Risikominderung von Safest gegenüber dem sichereren von Shortest und Valhalla.",
+        tagsCaption: "Vollständigkeit der OpenStreetMap-Tags in den Untersuchungsgebieten (\\% der Länge): Hauptstraßen mit \\texttt{parking:*}-Tag und mit \\texttt{maxspeed}, \\texttt{highway=cycleway} mit \\texttt{is\\_sidepath=yes}, Fußwege mit \\texttt{bicycle=designated}, Wege mit \\texttt{surface} oder \\texttt{tracktype}. Straßenbahngleise als eigene Wege, jedes Gleis gezählt, und Straßen mit Gleisen in der Fahrbahn (km).",
     },
 };
 

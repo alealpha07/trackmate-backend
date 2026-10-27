@@ -1,13 +1,14 @@
 import fs from "fs";
 import {
     CITIES, City, DETOUR_BANDS, GROUPS, GroupId, HAZARDS, HazardId, MAX_DETOUR_METERS, MAX_DETOUR_RATIO, MIN_COVERAGE,
-    PLANNER_VARIANTS, ROUTE_TYPES, TIMING_REPEATS, VARIANTS, VariantId,
+    PLANNER_VARIANTS, ROUTE_TYPES, TAG_CHECKS, TIMING_REPEATS, VARIANTS, VariantId,
 } from "./config.js";
 import { SNAPSHOT_FILE, Snapshot } from "./data.js";
 import { outPath, readJson, writeJson, writeText } from "./io.js";
 import { CityRoutes, PairResult, VariantResult } from "./routes.js";
 import { Score } from "./score.js";
 import { num, S } from "./strings.js";
+import { TagStats } from "./tags.js";
 import { VALHALLA_STATUS_FILE } from "./valhalla.js";
 
 export interface Row {
@@ -224,6 +225,7 @@ function csv(rows: Record<string, unknown>[]): string {
 export async function runAnalyze() {
     const routes = Object.fromEntries(CITIES.map((c) => [c.id, readJson<CityRoutes>(outPath("routes", `${c.id}.json`))]));
     const network = readJson<Record<string, Score>>(outPath("network.json"));
+    const tags = readJson<Record<string, TagStats>>(outPath("tags.json"));
     const snapshot = fs.existsSync(SNAPSHOT_FILE) ? readJson<Snapshot>(SNAPSHOT_FILE) : null;
     const valhallaStatus = fs.existsSync(VALHALLA_STATUS_FILE) ? readJson<any>(VALHALLA_STATUS_FILE) : null;
 
@@ -265,6 +267,11 @@ export async function runAnalyze() {
     ])));
     writeText(outPath("hazards.csv"), csv(CITIES.flatMap((c) => VARIANTS.flatMap((id) =>
         HAZARDS.map((h) => ({ city: c.id, variant: id, hazard: h, per_km: cities[c.id][id].hazards[h] }))))));
+    writeText(outPath("osm_tags.csv"), csv(CITIES.flatMap((c) => [
+        ...TAG_CHECKS.map((t) => ({ city: c.id, tag: t, meters: tags[c.id].checks[t].total, tagged: tags[c.id].checks[t].tagged })),
+        { city: c.id, tag: "tram_tracks", meters: tags[c.id].tramTracks, tagged: null },
+        { city: c.id, tag: "embedded_rails", meters: tags[c.id].embeddedRails, tagged: null },
+    ])));
 
     const planned = PLANNER_VARIANTS.map((v) => v.id);
     const T = S.table;
@@ -315,6 +322,20 @@ export async function runAnalyze() {
             caption: T.compositionCaption,
             header: [T.roadType, ...CITIES.map((c) => S.cities[c.id])],
             rows: ROUTE_TYPES.map((t) => [S.routeTypes[t], ...CITIES.map((c) => pct((network[c.id].types[t] ?? 0) / network[c.id].distance))]),
+        },
+        {
+            file: "tab_osm_tags",
+            caption: T.tagsCaption,
+            header: [T.city, ...TAG_CHECKS.map((t) => S.tags[t]), S.tags.tramTracks, S.tags.embeddedRails],
+            rows: CITIES.map((c) => {
+                const t = tags[c.id];
+                return [
+                    S.cities[c.id],
+                    ...TAG_CHECKS.map((id) => pct(t.checks[id].total > 0 ? t.checks[id].tagged / t.checks[id].total : null)),
+                    num(t.tramTracks / 1000, 1),
+                    num(t.embeddedRails / 1000, 1),
+                ];
+            }),
         },
         {
             file: "tab_showcase",

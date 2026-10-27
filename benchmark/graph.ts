@@ -7,7 +7,7 @@ import { markSnappable } from "../src/routing/graph/snap.js";
 import { haversineMeters } from "../src/routing/haversine.js";
 import { decodePolyline6 } from "../src/routing/instructions/polyline.js";
 import { buildAdjacency } from "../src/routing/search/dijkstra.js";
-import { BBox, GraphEdge, LatLng, OverpassWay, RoutingGraph } from "../src/routing/types.js";
+import { BBox, GraphEdge, LatLng, OverpassElement, OverpassWay, RoutingGraph } from "../src/routing/types.js";
 import { MATCH_TOLERANCE_METERS } from "./config.js";
 
 export interface Network {
@@ -16,6 +16,7 @@ export interface Network {
     edgeById: Map<string, GraphEdge>;
     ways: Map<number, OverpassWay>;
     railNodes: Set<number>;
+    elements: OverpassElement[];
 }
 
 const never = new AbortController().signal;
@@ -36,7 +37,7 @@ export async function loadNetwork(box: BBox, onProgress?: (done: number, total: 
         ways.set(el.id, el);
         if (RAILWAYS.includes(el.tags?.railway ?? "")) el.nodes.forEach((id) => railNodes.add(id));
     }
-    return { graph, adjacency, edgeById: new Map(graph.edges.map((e) => [e.id, e])), ways, railNodes };
+    return { graph, adjacency, edgeById: new Map(graph.edges.map((e) => [e.id, e])), ways, railNodes, elements };
 }
 
 export const wayIdOf = (edge: GraphEdge) => Number(edge.id.split(":")[0]);

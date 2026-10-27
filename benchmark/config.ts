@@ -128,3 +128,10 @@ export const GROUP_COLORS: Record<GroupId, string> = {
 export type HazardId = "tram" | "crossings" | "downhill" | "construction" | "lts4" | "parked" | "unpaved";
 
 export const HAZARDS: HazardId[] = ["tram", "crossings", "downhill", "construction", "lts4", "parked", "unpaved"];
+
+// tags the risk model falls back on a default without
+export type TagCheckId = "parking" | "maxspeed" | "sidepath" | "designated" | "surface";
+
+export const TAG_CHECKS: TagCheckId[] = ["parking", "maxspeed", "sidepath", "designated", "surface"];
+
+export const MAJOR_HIGHWAYS = ["trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"];

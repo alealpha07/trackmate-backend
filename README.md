@@ -67,7 +67,8 @@ npm run benchmark -- --only analyze,figures --lang en  # tables, charts and maps
 Compares Shortest, Safest and Safest with the app's default filters, and Valhalla's bicycle routes, in Milan, Parma,
 Turin, Berlin, Munich and Frankfurt. There are 30 seeded random pairs per city, 1.5 to 6 km apart in a straight line.
 The planner runs in process. Every route is scored with the same risk model, and Valhalla's route is matched onto the
-OpenStreetMap graph through its way ids.
+OpenStreetMap graph through its way ids. The data stage also measures, per city, how much of the map carries the tags
+the risk model otherwise fills in with a default.
 
 ## Docker
 
