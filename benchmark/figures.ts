@@ -56,7 +56,7 @@ html, body, #map { margin: 0; width: 100%; height: 100%; }
 .legend span.swatch { display: inline-block; width: 26px; height: 5px; margin: 0 8px 3px 0; vertical-align: middle; border-radius: 2px; }
 .end { width: 26px; height: 26px; border-radius: 50%; background: #222; color: #fff; font: bold 14px Arial, sans-serif;
     display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
-#inset { position: absolute; right: 14px; bottom: 34px; width: 440px; height: 330px; z-index: 2; display: none;
+#inset { position: absolute; width: 440px; height: 330px; z-index: 2; display: none;
     border: 3px solid #222; box-shadow: 0 1px 6px rgba(0,0,0,.45); }
 </style></head><body><div id="map"></div><div class="legend" id="legend"></div><div id="inset"></div>
 <script type="module">
@@ -83,25 +83,65 @@ const ready = (map) => new Promise((resolve) => {
     setTimeout(resolve, 45000);
 });
 const loaded = (map) => new Promise((resolve) => map.on("load", resolve));
+const INSET = { width: 440, height: 330, gap: 14, bottom: 34 };
+// screen points along every route and frame line, a few pixels apart
+function drawnPoints(map, lines) {
+    const points = [];
+    for (const coords of lines) {
+        const px = coords.map((c) => map.project(c));
+        px.forEach((p, i) => {
+            const q = px[i + 1] ?? p;
+            const steps = Math.max(1, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 5));
+            for (let k = 0; k < steps; k++) points.push({ x: p.x + ((q.x - p.x) * k) / steps, y: p.y + ((q.y - p.y) * k) / steps });
+        });
+    }
+    return points;
+}
+// the legend is top left, so the inset goes in the corner with the fewest routes under it
+function insetCorner(map, lines) {
+    const { clientWidth: w, clientHeight: h } = map.getContainer();
+    const corners = [
+        { side: "right", left: w - INSET.gap - INSET.width, top: h - INSET.bottom - INSET.height },
+        { side: "right", left: w - INSET.gap - INSET.width, top: INSET.gap },
+        { side: "left", left: INSET.gap, top: h - INSET.bottom - INSET.height },
+    ];
+    const points = drawnPoints(map, lines);
+    const margin = 16;
+    for (const c of corners) {
+        c.hits = points.filter((p) => p.x > c.left - margin && p.x < c.left + INSET.width + margin
+            && p.y > c.top - margin && p.y < c.top + INSET.height + margin).length;
+    }
+    return corners.reduce((a, b) => (b.hits < a.hits ? b : a));
+}
 window.render = async (spec) => {
     document.getElementById("legend").innerHTML = spec.legend;
+    const padding = { top: 50, bottom: 50, left: 360, right: 50 };
     const map = new maplibregl.Map({
         container: "map",
         style: style(spec),
         bounds: spec.bounds,
-        fitBoundsOptions: { padding: { top: 50, bottom: 50, left: 360, right: 50 } },
+        fitBoundsOptions: { padding },
         attributionControl: { compact: false },
         fadeDuration: 0,
         canvasContextAttributes: { preserveDrawingBuffer: true },
     });
     await loaded(map);
     drawRoutes(map, spec);
-    const waits = [ready(map)];
+    const waits = [];
     if (spec.inset) {
         const [[w, s], [e, n]] = spec.inset;
-        map.addSource("inset-frame", { type: "geojson", data: line([[w, s], [e, s], [e, n], [w, n], [w, s]]) });
+        const frame = [[w, s], [e, s], [e, n], [w, n], [w, s]];
+        map.addSource("inset-frame", { type: "geojson", data: line(frame) });
         map.addLayer({ id: "inset-frame", type: "line", source: "inset-frame", paint: { "line-color": "#222", "line-width": 2, "line-dasharray": [3, 2] } });
+        const lines = [...spec.routes.map((r) => r.coords), frame, [spec.from], [spec.to]];
+        let corner = insetCorner(map, lines);
+        if (corner.hits > 0) {
+            // no free corner: keep that side of the map clear
+            map.fitBounds(spec.bounds, { padding: { ...padding, [corner.side]: INSET.width + 2 * INSET.gap + 20 }, animate: false });
+            corner = insetCorner(map, lines);
+        }
         const box = document.getElementById("inset");
+        Object.assign(box.style, { left: corner.left + "px", top: corner.top + "px", right: "auto", bottom: "auto" });
         box.style.display = "block";
         const inset = new maplibregl.Map({
             container: box, style: style(spec), bounds: spec.inset, attributionControl: false, fadeDuration: 0,
@@ -111,6 +151,7 @@ window.render = async (spec) => {
         drawRoutes(inset, spec);
         waits.push(ready(inset));
     }
+    waits.push(ready(map));
     await Promise.all(waits);
 };
 window.ready = true;
