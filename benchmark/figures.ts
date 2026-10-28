@@ -5,8 +5,8 @@ import path from "path";
 import dotenv from "dotenv";
 import { chromium, Page } from "@playwright/test";
 import {
-    BENCHMARK_DIR, CITIES, DETOUR_BANDS, FILTER_COLORS, FILTER_CONFIGS, GROUP_COLORS, GROUPS, HAZARDS, LANGUAGE,
-    MAX_DETOUR_RATIO, PLANNER_VARIANTS, STADIA_STYLE, VARIANT_COLORS, VARIANTS, VariantId,
+    BENCHMARK_DIR, CITIES, CITY_COLORS, DETOUR_BANDS, FILTER_COLORS, FILTER_CONFIGS, GROUP_COLORS, GROUPS, HAZARDS, LANGUAGE,
+    MAX_DETOUR_RATIO, PLANNER_VARIANTS, STADIA_STYLE, TAG_CHECKS, VARIANT_COLORS, VARIANTS, VariantId,
 } from "./config.js";
 import { Metrics, Row, Showcase } from "./analyze.js";
 import { outPath, readJson } from "./io.js";
@@ -227,6 +227,28 @@ function chartConfigs(m: Metrics) {
                 options: {
                     indexAxis: "y",
                     scales: { x: { stacked: true, max: 100, title: { display: true, text: S.chart.lengthShare } }, y: { stacked: true } },
+                    plugins: legendBottom,
+                },
+            },
+        },
+        {
+            name: "fig_osm_tags", width: 1000, height: 640, percent: ["x"],
+            config: {
+                type: "bar",
+                data: {
+                    labels: TAG_CHECKS.map((id) => S.tags[id]),
+                    datasets: CITIES.map((c) => ({
+                        label: S.cities[c.id],
+                        backgroundColor: CITY_COLORS[c.id],
+                        data: TAG_CHECKS.map((id) => {
+                            const check = m.tags[c.id].checks[id];
+                            return check.total > 0 ? pct(check.tagged / check.total) : 0;
+                        }),
+                    })),
+                },
+                options: {
+                    indexAxis: "y",
+                    scales: { x: { min: 0, max: 100, title: { display: true, text: S.chart.tagShare } } },
                     plugins: legendBottom,
                 },
             },

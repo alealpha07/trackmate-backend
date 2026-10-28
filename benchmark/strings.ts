@@ -10,12 +10,13 @@ export interface Strings {
     groups: Record<GroupId, string>;
     routeTypes: Record<RouteType, string>;
     hazards: Record<HazardId, string>;
-    tags: Record<TagCheckId | "tramTracks" | "embeddedRails", string>;
+    tags: Record<TagCheckId, string>;
     roles: { best: string; median: string; worst: string };
     chart: {
         network: string;
         travelled: string;
         lengthShare: string;
+        tagShare: string;
         travelledShare: string;
         reduction: string;
         detour: string;
@@ -49,8 +50,6 @@ export interface Strings {
         detourGroup: string;
         withinGroup: string;
         reductionGroup: string;
-        tagsGroup: string;
-        railsGroup: string;
         riskCaption: string;
         detourCaption: string;
         lts4Caption: string;
@@ -58,7 +57,6 @@ export interface Strings {
         timingCaption: string;
         compositionCaption: string;
         showcaseCaption: string;
-        tagsCaption: string;
         configuration: string;
         reduction: string;
         detour: string;
@@ -114,19 +112,18 @@ const it: Strings = {
         unpaved: "Fondo non pavimentato (m/km)",
     },
     tags: {
-        parking: "Sosta",
-        maxspeed: "Limite",
-        sidepath: "Piste laterali",
-        designated: "Percorsi condivisi",
-        surface: "Fondo",
-        tramTracks: "Tram",
-        embeddedRails: "Su strada",
+        parking: "Sosta sulle strade principali",
+        maxspeed: "Limite di velocità sulle strade principali",
+        sidepath: "Piste ciclabili indicate come laterali a una strada",
+        designated: "Percorsi pedonali destinati anche alle bici",
+        surface: "Fondo dei percorsi",
     },
     roles: { best: "caso migliore", median: "caso mediano", worst: "caso peggiore" },
     chart: {
         network: "rete",
         travelled: "percorsa",
         lengthShare: "Quota della lunghezza",
+        tagShare: "Quota della lunghezza con il dato",
         travelledShare: "Quota della lunghezza percorsa",
         reduction: "Riduzione del rischio rispetto a Shortest",
         detour: "Deviazione rispetto a Shortest",
@@ -160,8 +157,6 @@ const it: Strings = {
         detourGroup: "Deviazione mediana (%)",
         withinGroup: "Entro la soglia (%)",
         reductionGroup: "Riduzione del rischio (%)",
-        tagsGroup: "Lunghezza con il tag (%)",
-        railsGroup: "Binari (km)",
         riskCaption: "Riduzione mediana del rischio rispetto a Shortest (\\%) e di Safest rispetto a Valhalla. $n$: coppie con un percorso di Valhalla confrontabile.",
         detourCaption: "Deviazione mediana rispetto a Shortest (\\%) e quota di percorsi entro la soglia di accettabilità (25\\% o 536 m).",
         lts4Caption: "Quota della lunghezza percorsa su strade ad alto stress (LTS 4, \\%).",
@@ -169,7 +164,6 @@ const it: Strings = {
         timingCaption: "Tempi di calcolo della costruzione del grafo a freddo, in secondi, e della pianificazione con il grafo in memoria, in millisecondi. Per il grafo è riportata la mediana, per ciascuna politica la mediana e il 95° percentile.",
         compositionCaption: "Composizione della rete ciclabile nelle aree di studio per tipo di strada del modello di rischio (\\% della lunghezza).",
         showcaseCaption: "Casi showcase: per ogni città la coppia migliore, le due mediane e la peggiore per riduzione del rischio di Safest rispetto al più sicuro tra Shortest e Valhalla.",
-        tagsCaption: "Completezza dei tag OpenStreetMap nelle aree di studio (\\% della lunghezza): strade principali con tag \\texttt{parking:*} e con \\texttt{maxspeed}, piste \\texttt{highway=cycleway} con \\texttt{is\\_sidepath=yes}, percorsi pedonali con \\texttt{bicycle=designated}, percorsi con \\texttt{surface} o \\texttt{tracktype}. Binari del tram mappati come vie separate, ogni binario contato, e strade con binari incorporati (km).",
         configuration: "Configurazione",
         reduction: "Riduzione (%)",
         detour: "Deviazione (%)",
@@ -225,19 +219,18 @@ const en: Strings = {
         unpaved: "Unpaved (m/km)",
     },
     tags: {
-        parking: "Parking",
-        maxspeed: "Speed limit",
-        sidepath: "Sidepaths",
-        designated: "Shared paths",
-        surface: "Surface",
-        tramTracks: "Tram",
-        embeddedRails: "In road",
+        parking: "Parking on major roads",
+        maxspeed: "Speed limit on major roads",
+        sidepath: "Cycleways marked as alongside a road",
+        designated: "Footways designated for bikes too",
+        surface: "Surface of paths",
     },
     roles: { best: "best case", median: "median case", worst: "worst case" },
     chart: {
         network: "network",
         travelled: "travelled",
         lengthShare: "Share of length",
+        tagShare: "Share of length with the data",
         travelledShare: "Share of travelled length",
         reduction: "Risk reduction against Shortest",
         detour: "Detour against Shortest",
@@ -271,8 +264,6 @@ const en: Strings = {
         detourGroup: "Median detour (%)",
         withinGroup: "Within the limit (%)",
         reductionGroup: "Risk reduction (%)",
-        tagsGroup: "Length with the tag (%)",
-        railsGroup: "Rails (km)",
         riskCaption: "Median risk reduction against Shortest (\\%) and of Safest against Valhalla. $n$: pairs with a comparable Valhalla route.",
         detourCaption: "Median detour against Shortest (\\%) and share of routes within the acceptable detour (25\\% or 536 m).",
         lts4Caption: "Share of the travelled length on high-stress roads (LTS 4, \\%).",
@@ -280,7 +271,6 @@ const en: Strings = {
         timingCaption: "Computing time of the cold graph build, in seconds, and of planning with the graph in memory, in milliseconds. For the graph the median is given, for each policy the median and the 95th percentile.",
         compositionCaption: "Composition of the bike network in the study areas by road type of the risk model (\\% of length).",
         showcaseCaption: "Showcase pairs: per city the best, the two median and the worst pair by Safest's risk reduction against the safer of Shortest and Valhalla.",
-        tagsCaption: "Completeness of the OpenStreetMap tags in the study areas (\\% of length): major roads with a \\texttt{parking:*} tag and with \\texttt{maxspeed}, \\texttt{highway=cycleway} with \\texttt{is\\_sidepath=yes}, footways with \\texttt{bicycle=designated}, paths with \\texttt{surface} or \\texttt{tracktype}. Tram tracks mapped as their own ways, each track counted, and streets with rails in the road (km).",
         configuration: "Setting",
         reduction: "Reduction (%)",
         detour: "Detour (%)",
@@ -336,19 +326,18 @@ const de: Strings = {
         unpaved: "Unbefestigt (m/km)",
     },
     tags: {
-        parking: "Parken",
-        maxspeed: "Tempolimit",
-        sidepath: "Begleitwege",
-        designated: "Gemeinsame Wege",
-        surface: "Belag",
-        tramTracks: "Straßenbahn",
-        embeddedRails: "In der Fahrbahn",
+        parking: "Parken an Hauptstraßen",
+        maxspeed: "Tempolimit an Hauptstraßen",
+        sidepath: "Radwege als straßenbegleitend markiert",
+        designated: "Fußwege auch für Räder ausgewiesen",
+        surface: "Belag der Wege",
     },
     roles: { best: "bester Fall", median: "mittlerer Fall", worst: "schlechtester Fall" },
     chart: {
         network: "Netz",
         travelled: "befahren",
         lengthShare: "Anteil der Länge",
+        tagShare: "Anteil der Länge mit Angabe",
         travelledShare: "Anteil der gefahrenen Länge",
         reduction: "Risikominderung gegenüber Shortest",
         detour: "Umweg gegenüber Shortest",
@@ -382,8 +371,6 @@ const de: Strings = {
         detourGroup: "Medianer Umweg (%)",
         withinGroup: "Innerhalb der Schwelle (%)",
         reductionGroup: "Risikominderung (%)",
-        tagsGroup: "Länge mit Tag (%)",
-        railsGroup: "Gleise (km)",
         riskCaption: "Mediane Risikominderung gegenüber Shortest (\\%) und von Safest gegenüber Valhalla. $n$: Paare mit vergleichbarer Valhalla-Route.",
         detourCaption: "Medianer Umweg gegenüber Shortest (\\%) und Anteil der Routen innerhalb des akzeptablen Umwegs (25\\% oder 536 m).",
         lts4Caption: "Anteil der gefahrenen Länge auf Straßen mit hohem Stress (LTS 4, \\%).",
@@ -391,7 +378,6 @@ const de: Strings = {
         timingCaption: "Rechenzeit des kalten Graphaufbaus, in Sekunden, und der Planung mit dem Graph im Speicher, in Millisekunden. Für den Graph ist der Median angegeben, für jede Strategie Median und 95. Perzentil.",
         compositionCaption: "Zusammensetzung des Radnetzes in den Untersuchungsgebieten nach Straßentyp des Risikomodells (\\% der Länge).",
         showcaseCaption: "Beispielpaare: pro Stadt das beste, die zwei mittleren und das schlechteste Paar nach Risikominderung von Safest gegenüber dem sichereren von Shortest und Valhalla.",
-        tagsCaption: "Vollständigkeit der OpenStreetMap-Tags in den Untersuchungsgebieten (\\% der Länge): Hauptstraßen mit \\texttt{parking:*}-Tag und mit \\texttt{maxspeed}, \\texttt{highway=cycleway} mit \\texttt{is\\_sidepath=yes}, Fußwege mit \\texttt{bicycle=designated}, Wege mit \\texttt{surface} oder \\texttt{tracktype}. Straßenbahngleise als eigene Wege, jedes Gleis gezählt, und Straßen mit Gleisen in der Fahrbahn (km).",
         configuration: "Einstellung",
         reduction: "Minderung (%)",
         detour: "Umweg (%)",

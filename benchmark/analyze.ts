@@ -84,6 +84,7 @@ export interface Metrics {
     graphMs: { median: number; p95: number };
     // per city id and "all"
     filters: Record<string, Record<FilterConfigId, FilterStats>>;
+    tags: Record<string, TagStats>;
 }
 
 export function quantile(values: number[], q: number): number {
@@ -319,6 +320,7 @@ export async function runAnalyze() {
             ...Object.fromEntries(CITIES.map((c) => [c.id, filterStats([c.id], routes, runs)])),
             all: filterStats(CITIES.map((c) => c.id), routes, runs),
         },
+        tags,
     };
     writeJson(outPath("metrics.json"), metrics);
 
@@ -415,21 +417,6 @@ export async function runAnalyze() {
             rows: FILTER_CONFIGS.map((id) => {
                 const f = metrics.filters.all[id];
                 return [S.filterConfigs[id], pct(f.reduction), pct(f.detour), `${f.riskier} / ${f.n}`, pct(f.lts4Share), pct(f.bikewayShare)];
-            }),
-        },
-        {
-            file: "tab_osm_tags",
-            caption: T.tagsCaption,
-            groups: [{ label: "", span: 1 }, { label: T.tagsGroup, span: TAG_CHECKS.length }, { label: T.railsGroup, span: 2 }],
-            header: [T.city, ...TAG_CHECKS.map((t) => S.tags[t]), S.tags.tramTracks, S.tags.embeddedRails],
-            rows: CITIES.map((c) => {
-                const t = tags[c.id];
-                return [
-                    S.cities[c.id],
-                    ...TAG_CHECKS.map((id) => pct(t.checks[id].total > 0 ? t.checks[id].tagged / t.checks[id].total : null)),
-                    num(t.tramTracks / 1000, 1),
-                    num(t.embeddedRails / 1000, 1),
-                ];
             }),
         },
         {

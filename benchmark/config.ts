@@ -157,4 +157,14 @@ export type TagCheckId = "parking" | "maxspeed" | "sidepath" | "designated" | "s
 
 export const TAG_CHECKS: TagCheckId[] = ["parking", "maxspeed", "sidepath", "designated", "surface"];
 
+// warm shades for Italy, cool shades for Germany
+export const CITY_COLORS: Record<string, string> = {
+    milan: "#e6550d",
+    parma: "#fd8d3c",
+    turin: "#fdbe85",
+    berlin: "#08519c",
+    munich: "#3182bd",
+    frankfurt: "#9ecae1",
+};
+
 export const MAJOR_HIGHWAYS = ["trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"];
