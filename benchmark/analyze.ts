@@ -1,7 +1,7 @@
 import fs from "fs";
 import {
     CITIES, City, DETOUR_BANDS, FILTER_CONFIGS, FilterConfigId, GROUPS, GroupId, HAZARDS, HazardId, MAX_DETOUR_METERS,
-    MAX_DETOUR_RATIO, MIN_COVERAGE, PLANNER_VARIANTS, ROUTE_TYPES, TAG_CHECKS, TIMING_REPEATS, VARIANTS, VariantId,
+    MAX_DETOUR_RATIO, MIN_COVERAGE, PLANNER_VARIANTS, ROUTE_TYPES, TAG_CHECKS, VARIANTS, VariantId,
 } from "./config.js";
 import { SNAPSHOT_FILE, Snapshot } from "./data.js";
 import { FilterRun, PairFilterRuns } from "./filters.js";
@@ -227,36 +227,68 @@ function filterStats(cityIds: string[], routes: Record<string, CityRoutes>, runs
 const pct = (x: number | null | undefined, digits = 1) => (x === null || x === undefined ? "--" : num(100 * x, digits));
 const ms = (x: number | null) => (x === null ? "--" : x < 100 ? num(x, 1) : num(x, 0));
 
-// labels like "5%" would start a latex comment
-const texCell = (text: string) => text.replace(/(?<!\\)%/g, "\\%");
+// written as latex commands so the tables do not depend on the input encoding
+const TEX_CHARS: Record<string, string> = {
+    "à": "\\`a", "è": "\\`e", "é": "\\'e", "ì": "\\`i", "ò": "\\`o", "ù": "\\`u", "È": "\\`E",
+    "ä": "\\\"a", "ö": "\\\"o", "ü": "\\\"u", "Ä": "\\\"A", "Ö": "\\\"O", "Ü": "\\\"U", "ß": "\\ss{}",
+    "°": "$^\\circ$",
+};
 
-function latexTable(caption: string, label: string, header: string[], rows: string[][], align?: string): string {
-    const cols = align ?? "l" + "r".repeat(header.length - 1);
-    header = header.map(texCell);
-    rows = rows.map((r) => r.map(texCell));
-    return [
-        "\\begin{table}[htbp]",
-        "\\centering",
-        "\\small",
-        `\\begin{tabular}{${cols}}`,
-        "\\toprule",
-        header.join(" & ") + " \\\\",
-        "\\midrule",
-        ...rows.map((r) => r.join(" & ") + " \\\\"),
-        "\\bottomrule",
-        "\\end{tabular}",
-        `\\caption{${caption}}`,
-        `\\label{${label}}`,
-        "\\end{table}",
-        "",
-    ].join("\n");
+// labels like "5%" would start a latex comment
+const texCell = (text: string) => text
+    .replace(/(?<!\\)%/g, "\\%")
+    .replace(/[àèéìòùÈäöüÄÖÜß°]/g, (c) => TEX_CHARS[c]);
+
+interface Group {
+    // empty for columns without a group
+    label: string;
+    span: number;
 }
 
 interface Table {
     file: string;
     caption: string;
+    // optional first header row over groups of columns
+    groups?: Group[];
     header: string[];
-    rows: string[][];
+    // null draws a rule
+    rows: (string[] | null)[];
+    align?: string;
+}
+
+function latexTable(t: Table): string {
+    const groupRows: string[] = [];
+    if (t.groups) {
+        const cells: string[] = [];
+        const rules: string[] = [];
+        let col = 1;
+        for (const g of t.groups) {
+            if (g.label === "") cells.push(...Array<string>(g.span).fill(""));
+            else {
+                cells.push(`\\multicolumn{${g.span}}{c}{${texCell(g.label)}}`);
+                rules.push(`\\cmidrule(lr){${col}-${col + g.span - 1}}`);
+            }
+            col += g.span;
+        }
+        groupRows.push(cells.join(" & ") + " \\\\", rules.join(" "));
+    }
+    return [
+        "\\begin{table}[htbp]",
+        "\\centering",
+        "\\small",
+        `\\begin{tabular}{${t.align ?? "l" + "r".repeat(t.header.length - 1)}}`,
+        "\\toprule",
+        ...groupRows,
+        t.header.map(texCell).join(" & ") + " \\\\",
+        "\\midrule",
+        ...t.rows.map((r) => (r === null ? "\\midrule" : r.map(texCell).join(" & ") + " \\\\")),
+        "\\bottomrule",
+        "\\end{tabular}",
+        `\\caption{${texCell(t.caption)}}`,
+        `\\label{${t.file.replace("_", ":")}}`,
+        "\\end{table}",
+        "",
+    ].join("\n");
 }
 
 function csv(rows: Record<string, unknown>[]): string {
@@ -326,8 +358,7 @@ export async function runAnalyze() {
     const V = S.variants;
     const cityRows = (cell: (s: Record<VariantId, VariantStats>) => string[]) => [
         ...CITIES.map((c) => [S.cities[c.id], ...cell(cities[c.id])]),
-        [S.countries.IT, ...cell(countries.IT)],
-        [S.countries.DE, ...cell(countries.DE)],
+        null,
         [S.allCities, ...cell(all)],
     ];
     const tables: Table[] = [
@@ -340,7 +371,8 @@ export async function runAnalyze() {
         {
             file: "tab_detour",
             caption: T.detourCaption,
-            header: [T.city, V.safest, V.safest_filters, V.valhalla, T.withinShort(V.safest), T.withinShort(V.safest_filters), T.withinShort(V.valhalla)],
+            groups: [{ label: "", span: 1 }, { label: T.detourGroup, span: 3 }, { label: T.withinGroup, span: 3 }],
+            header: [T.city, V.safest, V.safest_filters, V.valhalla, V.safest, V.safest_filters, V.valhalla],
             rows: cityRows((s) => [pct(s.safest.detour), pct(s.safest_filters.detour), pct(s.valhalla.detour), pct(s.safest.acceptable, 0), pct(s.safest_filters.acceptable, 0), pct(s.valhalla.acceptable, 0)]),
         },
         {
@@ -357,13 +389,18 @@ export async function runAnalyze() {
         },
         {
             file: "tab_timing",
-            caption: T.timingCaption(TIMING_REPEATS),
-            header: [T.city, T.graph, ...planned.map((id) => V[id])],
-            rows: [...CITIES.map((c) => [
-                S.cities[c.id],
-                num(median(routes[c.id].pairs.map((p) => p.graphMs)) / 1000, 1),
-                ...planned.map((id) => `${ms(cities[c.id][id].planMs)} / ${ms(cities[c.id][id].planP95)}`),
-            ]), [S.allCities, num(metrics.graphMs.median / 1000, 1), ...planned.map((id) => `${ms(all[id].planMs)} / ${ms(all[id].planP95)}`)]],
+            caption: T.timingCaption,
+            groups: [{ label: "", span: 1 }, { label: T.graph, span: 1 }, ...planned.map((id) => ({ label: V[id], span: 2 }))],
+            header: [T.city, T.median, ...planned.flatMap(() => [T.median, T.p95])],
+            rows: [
+                ...CITIES.map((c) => [
+                    S.cities[c.id],
+                    num(median(routes[c.id].pairs.map((p) => p.graphMs)) / 1000, 1),
+                    ...planned.flatMap((id) => [ms(cities[c.id][id].planMs), ms(cities[c.id][id].planP95)]),
+                ]),
+                null,
+                [S.allCities, num(metrics.graphMs.median / 1000, 1), ...planned.flatMap((id) => [ms(all[id].planMs), ms(all[id].planP95)])],
+            ],
         },
         {
             file: "tab_composition",
@@ -383,6 +420,7 @@ export async function runAnalyze() {
         {
             file: "tab_osm_tags",
             caption: T.tagsCaption,
+            groups: [{ label: "", span: 1 }, { label: T.tagsGroup, span: TAG_CHECKS.length }, { label: T.railsGroup, span: 2 }],
             header: [T.city, ...TAG_CHECKS.map((t) => S.tags[t]), S.tags.tramTracks, S.tags.embeddedRails],
             rows: CITIES.map((c) => {
                 const t = tags[c.id];
@@ -397,15 +435,18 @@ export async function runAnalyze() {
         {
             file: "tab_showcase",
             caption: T.showcaseCaption,
+            groups: [{ label: "", span: 4 }, { label: T.reductionGroup, span: 3 }],
             header: [T.city, T.pair, T.case, T.shortestKm, T.vsShortest, T.vsValhalla, T.index],
-            rows: showcase.map((s) => {
+            align: "lrlrrrr",
+            rows: showcase.flatMap((s, i) => {
                 const r = (id: VariantId) => rows.find((x) => x.city === s.city && x.pair === s.pair && x.variant === id)!;
-                return [S.cities[s.city], String(s.pair), S.roles[s.role], num(r("shortest").distance / 1000, 1), pct(r("safest").reduction), pct(r("safest").reductionVsValhalla), pct(s.score)];
+                const row = [S.cities[s.city], String(s.pair), S.roles[s.role], num(r("shortest").distance / 1000, 1), pct(r("safest").reduction), pct(r("safest").reductionVsValhalla), pct(s.score)];
+                return i > 0 && showcase[i - 1].city !== s.city ? [null, row] : [row];
             }),
         },
     ];
     fs.rmSync(outPath("tables"), { recursive: true, force: true });
-    for (const t of tables) writeText(outPath("tables", `${t.file}.tex`), latexTable(t.caption, t.file.replace("_", ":"), t.header, t.rows));
+    for (const t of tables) writeText(outPath("tables", `${t.file}.tex`), latexTable(t));
 
     const inconsistent = rows.filter((r) => r.variant !== "valhalla" && r.ok
         && routes[r.city].pairs.find((p) => p.pair.id === r.pair)!.variants[r.variant]!.consistent === false);
