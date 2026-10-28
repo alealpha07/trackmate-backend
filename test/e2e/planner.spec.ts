@@ -37,9 +37,13 @@ test("plans with Safest and Shortest from typed coordinates", async ({ page }) =
     expect(safest).toMatchObject({ start: { lat: 44.7815, lng: 9.846 }, end: { lat: 44.7815, lng: 9.856 }, via: [], vehicle: "bicycle", policy: "safest" });
     await expect(page.locator("#distance")).toHaveText(/^\d+\.\d km$/);
     await expect(page.locator("#duration")).toHaveText(/^\d+ min$/);
-    await expect(page.locator("#off-bikeways-item")).toBeVisible();
+    await expect(page.locator("#off-bikeways-item")).toBeHidden();
     await expect(page.locator("#legs")).toBeHidden();
     const safestKm = await kilometers(page);
+
+    await page.locator("input[name=cyclewaysOnly]").check();
+    expect(await planAndWait(page)).toMatchObject({ filters: { cyclewaysOnly: true } });
+    await expect(page.locator("#off-bikeways-item")).toBeVisible();
 
     await page.locator(".segmented label", { hasText: en["plan.shortest"] }).click();
     await expect(page.locator("#result")).toBeHidden();
@@ -88,7 +92,7 @@ test("the detour slider sets maxDetour", async ({ page }) => {
     const shown = page.locator("#max-detour-value");
 
     await expect(shown).toHaveText("25%");
-    expect(await planAndWait(page)).toMatchObject({ maxDetour: 25, filters: { cyclewaysOnly: true, avoidLts4: true, avoidUnpaved: false } });
+    expect(await planAndWait(page)).toMatchObject({ maxDetour: 25, filters: { cyclewaysOnly: false, avoidLts4: false, avoidUnpaved: false } });
 
     await slider.fill("0");
     await expect(shown).toHaveText("10%");

@@ -75,7 +75,7 @@ export interface PlannerVariant {
     maxDetour: number | null;
 }
 
-// safest_filters uses the app defaults
+// safest_filters: avoid high stress and cycleways only, with the default detour cap
 export const PLANNER_VARIANTS: PlannerVariant[] = [
     { id: "shortest", policy: "shortest", filters: {}, maxDetour: null },
     { id: "safest", policy: "safest", filters: {}, maxDetour: null },
