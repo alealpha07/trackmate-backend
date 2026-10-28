@@ -1,5 +1,5 @@
 import type { RouteType } from "../src/routing/types.js";
-import { GroupId, HazardId, LANGUAGE, Language, TagCheckId, VariantId } from "./config.js";
+import { FilterConfigId, GroupId, HazardId, LANGUAGE, Language, TagCheckId, VariantId } from "./config.js";
 
 export interface Strings {
     decimal: string;
@@ -7,6 +7,7 @@ export interface Strings {
     countries: { IT: string; DE: string };
     allCities: string;
     variants: Record<VariantId, string>;
+    filterConfigs: Record<FilterConfigId, string>;
     groups: Record<GroupId, string>;
     routeTypes: Record<RouteType, string>;
     hazards: Record<HazardId, string>;
@@ -27,6 +28,7 @@ export interface Strings {
         straight: string;
         planTime: string;
         wins: string;
+        medianReduction: string;
     };
     map: {
         title: (city: string, pair: number, role: string) => string;
@@ -52,6 +54,13 @@ export interface Strings {
         compositionCaption: string;
         showcaseCaption: string;
         tagsCaption: string;
+        configuration: string;
+        reduction: string;
+        detour: string;
+        riskier: string;
+        lts4: string;
+        bikeway: string;
+        filtersCaption: string;
     };
 }
 
@@ -61,6 +70,13 @@ const it: Strings = {
     countries: { IT: "Italia", DE: "Germania" },
     allCities: "Tutte",
     variants: { shortest: "Shortest", safest: "Safest", safest_filters: "Safest + filtri", valhalla: "Valhalla" },
+    filterConfigs: {
+        safest: "Safest",
+        cap: "Safest, deviazione max 25%",
+        lts4: "Safest, evita LTS 4",
+        cycleways: "Safest, solo ciclabili",
+        safest_filters: "Safest + filtri",
+    },
     groups: {
         cycle_track: "Pista ciclabile separata",
         path: "Percorso ciclabile o misto",
@@ -118,6 +134,7 @@ const it: Strings = {
         straight: "Distanza in linea d'aria (km)",
         planTime: "Tempo di calcolo, grafo in memoria (ms)",
         wins: "Coppie in cui la variante è la più sicura",
+        medianReduction: "Riduzione mediana del rischio rispetto a Shortest",
     },
     map: {
         title: (city, pair, role) => `${city}, coppia ${pair} (${role})`,
@@ -143,6 +160,13 @@ const it: Strings = {
         compositionCaption: "Composizione della rete ciclabile nelle aree di studio per tipo di strada del modello di rischio (\\% della lunghezza).",
         showcaseCaption: "Casi showcase: per ogni città la coppia migliore, le due mediane e la peggiore per riduzione del rischio di Safest rispetto al più sicuro tra Shortest e Valhalla.",
         tagsCaption: "Completezza dei tag OpenStreetMap nelle aree di studio (\\% della lunghezza): strade principali con tag \\texttt{parking:*} e con \\texttt{maxspeed}, piste \\texttt{highway=cycleway} con \\texttt{is\\_sidepath=yes}, percorsi pedonali con \\texttt{bicycle=designated}, percorsi con \\texttt{surface} o \\texttt{tracktype}. Binari del tram mappati come vie separate, ogni binario contato, e strade con binari incorporati (km).",
+        configuration: "Configurazione",
+        reduction: "Riduzione (%)",
+        detour: "Deviazione (%)",
+        riskier: "Più rischiosi di Shortest",
+        lts4: "LTS 4 (%)",
+        bikeway: "Ciclabile (%)",
+        filtersCaption: "Safest con una sola impostazione di Safest + filtri alla volta, su tutte le città: riduzione mediana del rischio e deviazione mediana rispetto a Shortest, percorsi più rischiosi di Shortest e quote della lunghezza su LTS 4 e su infrastruttura ciclabile. Le righe con un filtro includono il limite di deviazione del 25\\%.",
     },
 };
 
@@ -152,6 +176,13 @@ const en: Strings = {
     countries: { IT: "Italy", DE: "Germany" },
     allCities: "All",
     variants: { shortest: "Shortest", safest: "Safest", safest_filters: "Safest + filters", valhalla: "Valhalla" },
+    filterConfigs: {
+        safest: "Safest",
+        cap: "Safest, detour up to 25%",
+        lts4: "Safest, avoid LTS 4",
+        cycleways: "Safest, cycleways only",
+        safest_filters: "Safest + filters",
+    },
     groups: {
         cycle_track: "Separated cycle track",
         path: "Bike or shared path",
@@ -209,6 +240,7 @@ const en: Strings = {
         straight: "Straight-line distance (km)",
         planTime: "Planning time, graph in memory (ms)",
         wins: "Pairs where the variant is the safest",
+        medianReduction: "Median risk reduction against Shortest",
     },
     map: {
         title: (city, pair, role) => `${city}, pair ${pair} (${role})`,
@@ -234,6 +266,13 @@ const en: Strings = {
         compositionCaption: "Composition of the bike network in the study areas by road type of the risk model (\\% of length).",
         showcaseCaption: "Showcase pairs: per city the best, the two median and the worst pair by Safest's risk reduction against the safer of Shortest and Valhalla.",
         tagsCaption: "Completeness of the OpenStreetMap tags in the study areas (\\% of length): major roads with a \\texttt{parking:*} tag and with \\texttt{maxspeed}, \\texttt{highway=cycleway} with \\texttt{is\\_sidepath=yes}, footways with \\texttt{bicycle=designated}, paths with \\texttt{surface} or \\texttt{tracktype}. Tram tracks mapped as their own ways, each track counted, and streets with rails in the road (km).",
+        configuration: "Setting",
+        reduction: "Reduction (%)",
+        detour: "Detour (%)",
+        riskier: "Riskier than Shortest",
+        lts4: "LTS 4 (%)",
+        bikeway: "Bikeway (%)",
+        filtersCaption: "Safest with one setting of Safest + filters at a time, all cities: median risk reduction and median detour against Shortest, routes riskier than Shortest, and shares of length on LTS 4 and on bike infrastructure. The rows with a filter include the 25\\% detour limit.",
     },
 };
 
@@ -243,6 +282,13 @@ const de: Strings = {
     countries: { IT: "Italien", DE: "Deutschland" },
     allCities: "Alle",
     variants: { shortest: "Shortest", safest: "Safest", safest_filters: "Safest + Filter", valhalla: "Valhalla" },
+    filterConfigs: {
+        safest: "Safest",
+        cap: "Safest, Umweg bis 25%",
+        lts4: "Safest, LTS 4 meiden",
+        cycleways: "Safest, nur Radwege",
+        safest_filters: "Safest + Filter",
+    },
     groups: {
         cycle_track: "Baulicher Radweg",
         path: "Rad- oder gemeinsamer Weg",
@@ -300,6 +346,7 @@ const de: Strings = {
         straight: "Luftlinie (km)",
         planTime: "Rechenzeit, Graph im Speicher (ms)",
         wins: "Paare, in denen die Variante die sicherste ist",
+        medianReduction: "Mediane Risikominderung gegenüber Shortest",
     },
     map: {
         title: (city, pair, role) => `${city}, Paar ${pair} (${role})`,
@@ -325,6 +372,13 @@ const de: Strings = {
         compositionCaption: "Zusammensetzung des Radnetzes in den Untersuchungsgebieten nach Straßentyp des Risikomodells (\\% der Länge).",
         showcaseCaption: "Beispielpaare: pro Stadt das beste, die zwei mittleren und das schlechteste Paar nach Risikominderung von Safest gegenüber dem sichereren von Shortest und Valhalla.",
         tagsCaption: "Vollständigkeit der OpenStreetMap-Tags in den Untersuchungsgebieten (\\% der Länge): Hauptstraßen mit \\texttt{parking:*}-Tag und mit \\texttt{maxspeed}, \\texttt{highway=cycleway} mit \\texttt{is\\_sidepath=yes}, Fußwege mit \\texttt{bicycle=designated}, Wege mit \\texttt{surface} oder \\texttt{tracktype}. Straßenbahngleise als eigene Wege, jedes Gleis gezählt, und Straßen mit Gleisen in der Fahrbahn (km).",
+        configuration: "Einstellung",
+        reduction: "Minderung (%)",
+        detour: "Umweg (%)",
+        riskier: "Riskanter als Shortest",
+        lts4: "LTS 4 (%)",
+        bikeway: "Radinfrastruktur (%)",
+        filtersCaption: "Safest mit jeweils einer Einstellung von Safest + Filter, alle Städte: mediane Risikominderung und medianer Umweg gegenüber Shortest, Routen riskanter als Shortest und Anteile der Länge auf LTS 4 und auf Radinfrastruktur. Die Zeilen mit einem Filter enthalten die Umweggrenze von 25\\%.",
     },
 };
 

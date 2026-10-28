@@ -84,6 +84,29 @@ export const PLANNER_VARIANTS: PlannerVariant[] = [
 
 export const VARIANTS: VariantId[] = ["shortest", "safest", "safest_filters", "valhalla"];
 
+// safest with one setting of safest_filters at a time, to see what each one costs
+export type FilterRunId = "cap" | "lts4" | "cycleways";
+
+const CAP = PLANNER_VARIANTS.find((v) => v.id === "safest_filters")!.maxDetour;
+
+export const FILTER_RUNS: { id: FilterRunId; filters: RouteFilters; maxDetour: number | null }[] = [
+    { id: "cap", filters: {}, maxDetour: CAP },
+    { id: "lts4", filters: { avoidLts4: true }, maxDetour: CAP },
+    { id: "cycleways", filters: { cyclewaysOnly: true }, maxDetour: CAP },
+];
+
+export type FilterConfigId = "safest" | FilterRunId | "safest_filters";
+
+export const FILTER_CONFIGS: FilterConfigId[] = ["safest", "cap", "lts4", "cycleways", "safest_filters"];
+
+export const FILTER_COLORS: Record<FilterConfigId, string> = {
+    safest: "#2ca02c",
+    cap: "#98df8a",
+    lts4: "#9467bd",
+    cycleways: "#17becf",
+    safest_filters: "#1f77b4",
+};
+
 export const VARIANT_COLORS: Record<VariantId, string> = {
     shortest: "#d62728",
     safest: "#2ca02c",

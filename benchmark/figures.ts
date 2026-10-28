@@ -5,8 +5,8 @@ import path from "path";
 import dotenv from "dotenv";
 import { chromium, Page } from "@playwright/test";
 import {
-    BENCHMARK_DIR, CITIES, DETOUR_BANDS, GROUP_COLORS, GROUPS, HAZARDS, LANGUAGE, MAX_DETOUR_RATIO, PLANNER_VARIANTS,
-    STADIA_STYLE, VARIANT_COLORS, VARIANTS, VariantId,
+    BENCHMARK_DIR, CITIES, DETOUR_BANDS, FILTER_COLORS, FILTER_CONFIGS, GROUP_COLORS, GROUPS, HAZARDS, LANGUAGE,
+    MAX_DETOUR_RATIO, PLANNER_VARIANTS, STADIA_STYLE, VARIANT_COLORS, VARIANTS, VariantId,
 } from "./config.js";
 import { Metrics, Row, Showcase } from "./analyze.js";
 import { outPath, readJson } from "./io.js";
@@ -325,6 +325,21 @@ function chartConfigs(m: Metrics) {
                     },
                     plugins: legendBottom,
                 },
+            },
+        },
+        {
+            name: "fig_filters", width: 1000, height: 560, percent: ["y"],
+            config: {
+                type: "bar",
+                data: {
+                    labels: [...cityLabels, S.allCities],
+                    datasets: FILTER_CONFIGS.map((id) => ({
+                        label: S.filterConfigs[id],
+                        backgroundColor: FILTER_COLORS[id],
+                        data: [...CITIES.map((c) => pct(m.filters[c.id][id].reduction)), pct(m.filters.all[id].reduction)],
+                    })),
+                },
+                options: { scales: { y: { title: { display: true, text: S.chart.medianReduction } } }, plugins: legendBottom },
             },
         },
         {

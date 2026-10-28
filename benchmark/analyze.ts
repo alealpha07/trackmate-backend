@@ -1,9 +1,10 @@
 import fs from "fs";
 import {
-    CITIES, City, DETOUR_BANDS, GROUPS, GroupId, HAZARDS, HazardId, MAX_DETOUR_METERS, MAX_DETOUR_RATIO, MIN_COVERAGE,
-    PLANNER_VARIANTS, ROUTE_TYPES, TAG_CHECKS, TIMING_REPEATS, VARIANTS, VariantId,
+    CITIES, City, DETOUR_BANDS, FILTER_CONFIGS, FilterConfigId, GROUPS, GroupId, HAZARDS, HazardId, MAX_DETOUR_METERS,
+    MAX_DETOUR_RATIO, MIN_COVERAGE, PLANNER_VARIANTS, ROUTE_TYPES, TAG_CHECKS, TIMING_REPEATS, VARIANTS, VariantId,
 } from "./config.js";
 import { SNAPSHOT_FILE, Snapshot } from "./data.js";
+import { FilterRun, PairFilterRuns } from "./filters.js";
 import { outPath, readJson, writeJson, writeText } from "./io.js";
 import { CityRoutes, PairResult, VariantResult } from "./routes.js";
 import { Score } from "./score.js";
@@ -62,6 +63,16 @@ export interface Showcase {
     score: number;
 }
 
+export interface FilterStats {
+    n: number;
+    reduction: number;
+    detour: number;
+    // routes riskier than shortest
+    riskier: number;
+    lts4Share: number;
+    bikewayShare: number;
+}
+
 export interface Metrics {
     rows: Row[];
     cities: Record<string, Record<VariantId, VariantStats>>;
@@ -71,6 +82,8 @@ export interface Metrics {
     travelled: Record<string, Score>;
     showcase: Showcase[];
     graphMs: { median: number; p95: number };
+    // per city id and "all"
+    filters: Record<string, Record<FilterConfigId, FilterStats>>;
 }
 
 export function quantile(values: number[], q: number): number {
@@ -186,11 +199,41 @@ function pickShowcase(city: string, rows: Row[]): Showcase[] {
     });
 }
 
+// safest and safest_filters from the routes stage, the single settings from the filters stage
+function filterStats(cityIds: string[], routes: Record<string, CityRoutes>, runs: Record<string, PairFilterRuns[]>): Record<FilterConfigId, FilterStats> {
+    const fromRoute = (r: VariantResult | undefined): FilterRun | null => (r?.ok && r.score
+        ? { distance: r.distance!, risk: r.risk!, scored: r.score.distance, lts4: r.score.lts[3], bikeway: r.score.bikeway }
+        : null);
+    return Object.fromEntries(FILTER_CONFIGS.map((id) => {
+        const pairs = cityIds.flatMap((c) => routes[c].pairs.flatMap((p) => {
+            const shortest = p.variants.shortest;
+            const own = id === "safest" || id === "safest_filters"
+                ? fromRoute(p.variants[id])
+                : runs[c].find((x) => x.pair === p.pair.id)?.runs[id] ?? null;
+            return shortest?.ok && own ? [{ shortest, own }] : [];
+        }));
+        const scored = sum(pairs.map((x) => x.own.scored));
+        return [id, {
+            n: pairs.length,
+            reduction: median(pairs.map((x) => 1 - x.own.risk / x.shortest.risk!)),
+            detour: median(pairs.map((x) => x.own.distance / x.shortest.distance! - 1)),
+            riskier: pairs.filter((x) => x.own.risk > x.shortest.risk! * (1 + 1e-9)).length,
+            lts4Share: sum(pairs.map((x) => x.own.lts4)) / scored,
+            bikewayShare: sum(pairs.map((x) => x.own.bikeway)) / scored,
+        }];
+    })) as Record<FilterConfigId, FilterStats>;
+}
+
 const pct = (x: number | null | undefined, digits = 1) => (x === null || x === undefined ? "--" : num(100 * x, digits));
 const ms = (x: number | null) => (x === null ? "--" : x < 100 ? num(x, 1) : num(x, 0));
 
+// labels like "5%" would start a latex comment
+const texCell = (text: string) => text.replace(/(?<!\\)%/g, "\\%");
+
 function latexTable(caption: string, label: string, header: string[], rows: string[][], align?: string): string {
     const cols = align ?? "l" + "r".repeat(header.length - 1);
+    header = header.map(texCell);
+    rows = rows.map((r) => r.map(texCell));
     return [
         "\\begin{table}[htbp]",
         "\\centering",
@@ -226,6 +269,7 @@ export async function runAnalyze() {
     const routes = Object.fromEntries(CITIES.map((c) => [c.id, readJson<CityRoutes>(outPath("routes", `${c.id}.json`))]));
     const network = readJson<Record<string, Score>>(outPath("network.json"));
     const tags = readJson<Record<string, TagStats>>(outPath("tags.json"));
+    const runs = Object.fromEntries(CITIES.map((c) => [c.id, readJson<PairFilterRuns[]>(outPath("filters", `${c.id}.json`))]));
     const snapshot = fs.existsSync(SNAPSHOT_FILE) ? readJson<Snapshot>(SNAPSHOT_FILE) : null;
     const valhallaStatus = fs.existsSync(VALHALLA_STATUS_FILE) ? readJson<any>(VALHALLA_STATUS_FILE) : null;
 
@@ -239,6 +283,10 @@ export async function runAnalyze() {
         rows, cities, countries, all, network, showcase,
         travelled: Object.fromEntries(CITIES.map((c) => [c.id, routes[c.id].travelled])),
         graphMs: { median: median(graphTimes), p95: quantile(graphTimes, 0.95) },
+        filters: {
+            ...Object.fromEntries(CITIES.map((c) => [c.id, filterStats([c.id], routes, runs)])),
+            all: filterStats(CITIES.map((c) => c.id), routes, runs),
+        },
     };
     writeJson(outPath("metrics.json"), metrics);
 
@@ -322,6 +370,15 @@ export async function runAnalyze() {
             caption: T.compositionCaption,
             header: [T.roadType, ...CITIES.map((c) => S.cities[c.id])],
             rows: ROUTE_TYPES.map((t) => [S.routeTypes[t], ...CITIES.map((c) => pct((network[c.id].types[t] ?? 0) / network[c.id].distance))]),
+        },
+        {
+            file: "tab_filters",
+            caption: T.filtersCaption,
+            header: [T.configuration, T.reduction, T.detour, T.riskier, T.lts4, T.bikeway],
+            rows: FILTER_CONFIGS.map((id) => {
+                const f = metrics.filters.all[id];
+                return [S.filterConfigs[id], pct(f.reduction), pct(f.detour), `${f.riskier} / ${f.n}`, pct(f.lts4Share), pct(f.bikewayShare)];
+            }),
         },
         {
             file: "tab_osm_tags",

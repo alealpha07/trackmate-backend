@@ -1,7 +1,7 @@
 import path from "path";
 import { CACHE_DIR, OVERPASS_ENDPOINTS, VALHALLA_URL } from "./config.js";
 
-const STAGES = ["data", "valhalla", "routes", "analyze", "figures"] as const;
+const STAGES = ["data", "valhalla", "routes", "filters", "analyze", "figures"] as const;
 type Stage = (typeof STAGES)[number];
 
 // the routing modules read these when they load, and .env is never read for them
@@ -29,6 +29,7 @@ const run: Record<Stage, () => Promise<void>> = {
     data: async () => (await import("./data.js")).runData(),
     valhalla: async () => (await import("./valhalla.js")).runValhalla(),
     routes: async () => (await import("./routes.js")).runRoutes(),
+    filters: async () => (await import("./filters.js")).runFilters(),
     analyze: async () => (await import("./analyze.js")).runAnalyze(),
     figures: async () => (await import("./figures.js")).runFigures(),
 };
